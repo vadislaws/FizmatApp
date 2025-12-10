@@ -14,10 +14,13 @@ class FizTimetb extends StatefulWidget {
 
 class _FizTimetbState extends State<FizTimetb> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String? _selectedClass;
+  int? _selectedGradeNumber;
+  String? _selectedGradeLetter;
   ClassSchedule? _currentSchedule;
 
   final List<String> _weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  final List<int> _grades = [7, 8, 9, 10, 11];
+  final List<String> _letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
 
   @override
   void initState() {
@@ -36,12 +39,13 @@ class _FizTimetbState extends State<FizTimetb> with SingleTickerProviderStateMix
     super.didChangeDependencies();
 
     // Load user's class schedule by default
-    if (_selectedClass == null) {
+    if (_selectedGradeNumber == null && _selectedGradeLetter == null) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.userModel;
 
       if (user != null && user.classGradeNumber != null && user.classLetter != null) {
-        _selectedClass = '${user.classGradeNumber}${user.classLetter}';
+        _selectedGradeNumber = user.classGradeNumber;
+        _selectedGradeLetter = user.classLetter;
         _loadSchedule();
       }
     }
@@ -54,17 +58,11 @@ class _FizTimetbState extends State<FizTimetb> with SingleTickerProviderStateMix
   }
 
   void _loadSchedule() {
-    if (_selectedClass == null) return;
+    if (_selectedGradeNumber == null || _selectedGradeLetter == null) return;
 
-    // Parse class string (e.g., "7A" -> grade: 7, letter: "A")
-    final gradeNumber = int.tryParse(_selectedClass!.substring(0, _selectedClass!.length - 1));
-    final gradeLetter = _selectedClass!.substring(_selectedClass!.length - 1);
-
-    if (gradeNumber != null) {
-      setState(() {
-        _currentSchedule = ScheduleData.getScheduleForClass(gradeNumber, gradeLetter);
-      });
-    }
+    setState(() {
+      _currentSchedule = ScheduleData.getScheduleForClass(_selectedGradeNumber!, _selectedGradeLetter!);
+    });
   }
 
   @override
@@ -76,31 +74,70 @@ class _FizTimetbState extends State<FizTimetb> with SingleTickerProviderStateMix
       appBar: AppBar(
         title: Text(l10n.translate('schedules')),
         actions: [
-          // Class selector dropdown
+          // Grade number selector
           Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: DropdownButton<String>(
-              value: _selectedClass,
+            padding: const EdgeInsets.only(right: 8.0),
+            child: DropdownButton<int>(
+              value: _selectedGradeNumber,
               hint: Text(
-                l10n.translate('select_class'),
+                'Grade',
                 style: TextStyle(color: theme.colorScheme.onPrimary),
               ),
               dropdownColor: theme.cardColor,
               icon: Icon(Icons.arrow_drop_down, color: theme.colorScheme.onPrimary),
               underline: Container(),
-              items: ScheduleData.getAvailableClasses().map((className) {
+              items: _grades.map((grade) {
                 return DropdownMenuItem(
-                  value: className,
+                  value: grade,
                   child: Text(
-                    className,
-                    style: TextStyle(color: theme.colorScheme.onSurface),
+                    '$grade',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 );
               }).toList(),
               onChanged: (value) {
                 setState(() {
-                  _selectedClass = value;
-                  _loadSchedule();
+                  _selectedGradeNumber = value;
+                  if (_selectedGradeLetter != null) {
+                    _loadSchedule();
+                  }
+                });
+              },
+            ),
+          ),
+          // Grade letter selector
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: DropdownButton<String>(
+              value: _selectedGradeLetter,
+              hint: Text(
+                'Letter',
+                style: TextStyle(color: theme.colorScheme.onPrimary),
+              ),
+              dropdownColor: theme.cardColor,
+              icon: Icon(Icons.arrow_drop_down, color: theme.colorScheme.onPrimary),
+              underline: Container(),
+              items: _letters.map((letter) {
+                return DropdownMenuItem(
+                  value: letter,
+                  child: Text(
+                    letter,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedGradeLetter = value;
+                  if (_selectedGradeNumber != null) {
+                    _loadSchedule();
+                  }
                 });
               },
             ),

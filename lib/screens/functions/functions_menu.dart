@@ -74,6 +74,24 @@ class FunctionsMenu extends StatelessWidget {
         ),
       ),
       _MenuItem(
+        title: l10n.translate('clubs'),
+        icon: Icons.groups,
+        color: Colors.purple,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ClubsScreen()),
+        ),
+      ),
+      _MenuItem(
+        title: l10n.translate('formulas'),
+        icon: Icons.functions,
+        color: Colors.green,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const FizFormula()),
+        ),
+      ),
+      _MenuItem(
         title: l10n.translate('birthdays'),
         icon: Icons.cake,
         color: Colors.pink,
@@ -89,24 +107,6 @@ class FunctionsMenu extends StatelessWidget {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const FizBookOnline()),
-        ),
-      ),
-      _MenuItem(
-        title: l10n.translate('formulas'),
-        icon: Icons.functions,
-        color: Colors.green,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const FizFormula()),
-        ),
-      ),
-      _MenuItem(
-        title: l10n.translate('clubs'),
-        icon: Icons.groups,
-        color: Colors.purple,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ClubsScreen()),
         ),
       ),
     ];
