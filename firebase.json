@@ -1,0 +1,26 @@
+{
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "fizmatapp",
+          "configurations": {
+            "android": "1:949357295578:android:014153a784219029bbf2e3",
+            "ios": "1:949357295578:ios:b7f44f1d52b259b8bbf2e3",
+            "web": "1:949357295578:web:2c664786898b1b5abbf2e3"
+          }
+        }
+      }
+    }
+  },
+  "functions": {
+    "source": "functions",
+    "predeploy": [],
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log"
+    ]
+  }
+}
