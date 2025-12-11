@@ -1,4 +1,6 @@
+import 'package:fizmat_app/data/book_data.dart';
 import 'package:fizmat_app/l10n/app_localizations.dart';
+import 'package:fizmat_app/models/book.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
@@ -10,10 +12,8 @@ class FizBookOnline extends StatefulWidget {
 }
 
 class _FizBookOnlineState extends State<FizBookOnline> {
-  int? _selectedGrade;
-  bool _isLoading = true;
-  bool _hasError = false;
-  String? _errorMessage;
+  String? _selectedGroup;
+  final List<String> _groups = BookData.getAllGroups();
 
   @override
   Widget build(BuildContext context) {
@@ -24,28 +24,14 @@ class _FizBookOnlineState extends State<FizBookOnline> {
       appBar: AppBar(
         title: Text(l10n.translate('books')),
         centerTitle: true,
-        actions: _selectedGrade != null
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: () {
-                    setState(() {
-                      _isLoading = true;
-                      _hasError = false;
-                    });
-                  },
-                  tooltip: 'Refresh',
-                ),
-              ]
-            : null,
       ),
-      body: _selectedGrade == null
-          ? _buildGradeSelection(context, theme, l10n)
-          : _buildWebView(),
+      body: _selectedGroup == null
+          ? _buildGroupSelection(context, theme, l10n)
+          : _buildBooksGrid(context, theme, l10n),
     );
   }
 
-  Widget _buildGradeSelection(
+  Widget _buildGroupSelection(
     BuildContext context,
     ThemeData theme,
     AppLocalizations l10n,
@@ -74,18 +60,17 @@ class _FizBookOnlineState extends State<FizBookOnline> {
             ),
             const SizedBox(height: 32),
             Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.3,
-                children: [
-                  _buildGradeCard(7, theme),
-                  _buildGradeCard(8, theme),
-                  _buildGradeCard(9, theme),
-                  _buildGradeCard(10, theme),
-                  _buildGradeCard(11, theme),
-                ],
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.3,
+                ),
+                itemCount: _groups.length,
+                itemBuilder: (context, index) {
+                  return _buildGroupCard(_groups[index], theme);
+                },
               ),
             ),
           ],
@@ -94,7 +79,7 @@ class _FizBookOnlineState extends State<FizBookOnline> {
     );
   }
 
-  Widget _buildGradeCard(int grade, ThemeData theme) {
+  Widget _buildGroupCard(String group, ThemeData theme) {
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(
@@ -103,7 +88,7 @@ class _FizBookOnlineState extends State<FizBookOnline> {
       child: InkWell(
         onTap: () {
           setState(() {
-            _selectedGrade = grade;
+            _selectedGroup = group;
           });
         },
         borderRadius: BorderRadius.circular(20),
@@ -119,242 +104,207 @@ class _FizBookOnlineState extends State<FizBookOnline> {
               ],
             ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  '$grade',
-                  style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '${grade} класс',
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text(
+                group,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                   color: theme.colorScheme.onSurface,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildWebView() {
-    final theme = Theme.of(context);
+  Widget _buildBooksGrid(
+    BuildContext context,
+    ThemeData theme,
+    AppLocalizations l10n,
+  ) {
+    final books = BookData.getBooksByGroup(_selectedGroup!);
 
-    // Build URL with grade parameter
-    const baseUrl = 'https://arcbomi.github.io/fizmat/arcbomi/book-online/';
-    final urlWithGrade = _selectedGrade != null
-        ? '$baseUrl?grade=$_selectedGrade'
-        : baseUrl;
-
-    return Stack(
+    return Column(
       children: [
-        InAppWebView(
-          key: ValueKey(_selectedGrade), // Force rebuild when grade changes
-          initialUrlRequest: URLRequest(
-            url: WebUri(urlWithGrade),
-          ),
-          initialSettings: InAppWebViewSettings(
-            mediaPlaybackRequiresUserGesture: false,
-            javaScriptEnabled: true,
-            supportZoom: true,
-            builtInZoomControls: true,
-            displayZoomControls: false,
-            mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
-          ),
-          onLoadStart: (controller, url) {
-            setState(() {
-              _isLoading = true;
-              _hasError = false;
-            });
-          },
-          onLoadStop: (controller, url) {
-            setState(() {
-              _isLoading = false;
-            });
-          },
-          onReceivedError: (controller, request, error) {
-            setState(() {
-              _isLoading = false;
-              _hasError = true;
-              _errorMessage = error.description;
-            });
-          },
-          onReceivedHttpError: (controller, request, response) {
-            setState(() {
-              _isLoading = false;
-              _hasError = true;
-              _errorMessage = 'HTTP Error ${response.statusCode}';
-            });
-          },
-        ),
-
-        // Loading indicator
-        if (_isLoading)
-          Container(
-            color: theme.scaffoldBackgroundColor,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Loading textbooks...',
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
+        // Group indicator
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          color: theme.colorScheme.primaryContainer,
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  setState(() {
+                    _selectedGroup = null;
+                  });
+                },
               ),
-            ),
+              const SizedBox(width: 8),
+              Text(
+                _selectedGroup!,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
+              ),
+            ],
           ),
+        ),
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.all(16),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.7,
+            ),
+            itemCount: books.length,
+            itemBuilder: (context, index) {
+              return _buildBookCard(books[index], theme);
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
-        // Error display
-        if (_hasError && !_isLoading)
-          Container(
-            color: theme.scaffoldBackgroundColor,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: theme.colorScheme.error,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Failed to load page',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
+  Widget _buildBookCard(BookInfo book, ThemeData theme) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BookViewerScreen(book: book),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                child: Image.network(
+                  book.image,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: theme.colorScheme.surfaceVariant,
+                      child: Icon(
+                        Icons.book,
+                        size: 48,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _errorMessage ?? 'Unknown error occurred',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: theme.colorScheme.surfaceVariant,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _isLoading = true;
-                          _hasError = false;
-                        });
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Retry'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _selectedGrade = null;
-                          _hasError = false;
-                        });
-                      },
-                      child: const Text('Choose another grade'),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
             ),
-          ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                book.name,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-        // Back button
-        Positioned(
-          bottom: 16,
-          right: 16,
-          child: FloatingActionButton.small(
-            onPressed: () {
+class BookViewerScreen extends StatefulWidget {
+  final BookInfo book;
+
+  const BookViewerScreen({super.key, required this.book});
+
+  @override
+  State<BookViewerScreen> createState() => _BookViewerScreenState();
+}
+
+class _BookViewerScreenState extends State<BookViewerScreen> {
+  bool _isLoading = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.book.name),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          InAppWebView(
+            initialUrlRequest: URLRequest(
+              url: WebUri(widget.book.downloadPage),
+            ),
+            initialSettings: InAppWebViewSettings(
+              mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+            ),
+            onLoadStart: (controller, url) {
               setState(() {
-                _selectedGrade = null;
                 _isLoading = true;
-                _hasError = false;
               });
             },
-            tooltip: 'Change grade',
-            backgroundColor: theme.colorScheme.primaryContainer,
-            child: Icon(
-              Icons.arrow_back,
-              color: theme.colorScheme.onPrimaryContainer,
-            ),
+            onLoadStop: (controller, url) {
+              setState(() {
+                _isLoading = false;
+              });
+            },
+            onReceivedError: (controller, request, error) {
+              setState(() {
+                _isLoading = false;
+              });
+            },
           ),
-        ),
-
-        // Grade indicator
-        if (!_hasError)
-          Positioned(
-            bottom: 16,
-            left: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.menu_book,
-                    size: 18,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Grade $_selectedGrade',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                ],
+          if (_isLoading)
+            Container(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: const Center(
+                child: CircularProgressIndicator(),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
