@@ -114,4 +114,11 @@ class FriendsService {
         .map((doc) => UserModel.fromMap(doc.data()!))
         .toList();
   }
+
+  /// Get a single user by ID
+  Future<UserModel?> getUserById(String uid) async {
+    final doc = await _firestore.collection('users').doc(uid).get();
+    if (!doc.exists) return null;
+    return UserModel.fromMap(doc.data()!);
+  }
 }

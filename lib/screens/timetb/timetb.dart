@@ -73,76 +73,6 @@ class _FizTimetbState extends State<FizTimetb> with SingleTickerProviderStateMix
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.translate('schedules')),
-        actions: [
-          // Grade number selector
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: DropdownButton<int>(
-              value: _selectedGradeNumber,
-              hint: Text(
-                'Grade',
-                style: TextStyle(color: theme.colorScheme.onPrimary),
-              ),
-              dropdownColor: theme.cardColor,
-              icon: Icon(Icons.arrow_drop_down, color: theme.colorScheme.onPrimary),
-              underline: Container(),
-              items: _grades.map((grade) {
-                return DropdownMenuItem(
-                  value: grade,
-                  child: Text(
-                    '$grade',
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedGradeNumber = value;
-                  if (_selectedGradeLetter != null) {
-                    _loadSchedule();
-                  }
-                });
-              },
-            ),
-          ),
-          // Grade letter selector
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: DropdownButton<String>(
-              value: _selectedGradeLetter,
-              hint: Text(
-                'Letter',
-                style: TextStyle(color: theme.colorScheme.onPrimary),
-              ),
-              dropdownColor: theme.cardColor,
-              icon: Icon(Icons.arrow_drop_down, color: theme.colorScheme.onPrimary),
-              underline: Container(),
-              items: _letters.map((letter) {
-                return DropdownMenuItem(
-                  value: letter,
-                  child: Text(
-                    letter,
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedGradeLetter = value;
-                  if (_selectedGradeNumber != null) {
-                    _loadSchedule();
-                  }
-                });
-              },
-            ),
-          ),
-        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -151,17 +81,128 @@ class _FizTimetbState extends State<FizTimetb> with SingleTickerProviderStateMix
           }).toList(),
         ),
       ),
-      body: _currentSchedule == null
-          ? _buildEmptyState(theme, l10n)
-          : TabBarView(
-              controller: _tabController,
-              children: _weekDays.map((day) {
-                final daySchedule = _currentSchedule!.weekSchedule[day];
-                return daySchedule == null
-                    ? _buildNoLessonsState(theme, l10n)
-                    : _buildDaySchedule(theme, l10n, daySchedule);
-              }).toList(),
-            ),
+      body: Column(
+        children: [
+          // Class Selector
+          _buildClassSelector(theme, l10n),
+          const Divider(height: 1),
+          // Schedule Content
+          Expanded(
+            child: _currentSchedule == null
+                ? _buildEmptyState(theme, l10n)
+                : TabBarView(
+                    controller: _tabController,
+                    children: _weekDays.map((day) {
+                      final daySchedule = _currentSchedule!.weekSchedule[day];
+                      return daySchedule == null
+                          ? _buildNoLessonsState(theme, l10n)
+                          : _buildDaySchedule(theme, l10n, daySchedule);
+                    }).toList(),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClassSelector(ThemeData theme, AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.school, size: 18, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                l10n.translate('select_class'),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              // Grade Number Dropdown
+              Expanded(
+                flex: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: theme.cardTheme.color,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: _selectedGradeNumber,
+                      hint: Text(l10n.translate('grade_number')),
+                      isExpanded: true,
+                      items: _grades.map((grade) {
+                        return DropdownMenuItem<int>(
+                          value: grade,
+                          child: Text('$grade'),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedGradeNumber = value;
+                          if (_selectedGradeLetter != null) {
+                            _loadSchedule();
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Letter Dropdown
+              Expanded(
+                flex: 1,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: theme.cardTheme.color,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedGradeLetter,
+                      hint: Text(l10n.translate('letter')),
+                      isExpanded: true,
+                      items: _letters.map((letter) {
+                        return DropdownMenuItem<String>(
+                          value: letter,
+                          child: Text(letter),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedGradeLetter = value;
+                          if (_selectedGradeNumber != null) {
+                            _loadSchedule();
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

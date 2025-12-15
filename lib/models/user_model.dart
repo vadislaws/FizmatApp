@@ -17,6 +17,11 @@ class UserModel {
   final DateTime? lastKundelikSync;  // Last Kundelik sync time
   final int friendCount;  // Number of friends
   final Map<String, dynamic>? kundelikData;  // Additional Kundelik data
+  // Friends-only privacy settings
+  final bool showGpaToFriendsOnly;  // Show GPA to friends only
+  final bool showBioToFriendsOnly;  // Show bio to friends only
+  final bool showBirthdayToFriendsOnly;  // Show birthday to friends only
+  final bool showClassToFriendsOnly;  // Show class to friends only
 
   UserModel({
     required this.uid,
@@ -37,6 +42,10 @@ class UserModel {
     this.lastKundelikSync,
     this.friendCount = 0,
     this.kundelikData,
+    this.showGpaToFriendsOnly = false,
+    this.showBioToFriendsOnly = false,
+    this.showBirthdayToFriendsOnly = false,
+    this.showClassToFriendsOnly = false,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -61,6 +70,10 @@ class UserModel {
       lastKundelikSync: map['lastKundelikSync'] != null ? DateTime.parse(map['lastKundelikSync']) : null,
       friendCount: map['friendCount'] ?? 0,
       kundelikData: map['kundelikData'],
+      showGpaToFriendsOnly: map['showGpaToFriendsOnly'] ?? false,
+      showBioToFriendsOnly: map['showBioToFriendsOnly'] ?? false,
+      showBirthdayToFriendsOnly: map['showBirthdayToFriendsOnly'] ?? false,
+      showClassToFriendsOnly: map['showClassToFriendsOnly'] ?? false,
     );
   }
 
@@ -84,6 +97,10 @@ class UserModel {
       'lastKundelikSync': lastKundelikSync?.toIso8601String(),
       'friendCount': friendCount,
       'kundelikData': kundelikData,
+      'showGpaToFriendsOnly': showGpaToFriendsOnly,
+      'showBioToFriendsOnly': showBioToFriendsOnly,
+      'showBirthdayToFriendsOnly': showBirthdayToFriendsOnly,
+      'showClassToFriendsOnly': showClassToFriendsOnly,
     };
   }
 
@@ -106,6 +123,10 @@ class UserModel {
     DateTime? lastKundelikSync,
     int? friendCount,
     Map<String, dynamic>? kundelikData,
+    bool? showGpaToFriendsOnly,
+    bool? showBioToFriendsOnly,
+    bool? showBirthdayToFriendsOnly,
+    bool? showClassToFriendsOnly,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -126,6 +147,10 @@ class UserModel {
       lastKundelikSync: lastKundelikSync ?? this.lastKundelikSync,
       friendCount: friendCount ?? this.friendCount,
       kundelikData: kundelikData ?? this.kundelikData,
+      showGpaToFriendsOnly: showGpaToFriendsOnly ?? this.showGpaToFriendsOnly,
+      showBioToFriendsOnly: showBioToFriendsOnly ?? this.showBioToFriendsOnly,
+      showBirthdayToFriendsOnly: showBirthdayToFriendsOnly ?? this.showBirthdayToFriendsOnly,
+      showClassToFriendsOnly: showClassToFriendsOnly ?? this.showClassToFriendsOnly,
     );
   }
 

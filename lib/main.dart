@@ -6,6 +6,7 @@ import 'package:fizmat_app/providers/kundelik_provider.dart';
 import 'package:fizmat_app/providers/locale_provider.dart';
 import 'package:fizmat_app/providers/theme_provider.dart';
 import 'package:fizmat_app/models/user_model.dart';
+import 'package:fizmat_app/screens/admin/admin_panel_screen.dart';
 import 'package:fizmat_app/screens/auth/code_verification_screen.dart';
 import 'package:fizmat_app/screens/auth/email_verification_screen.dart';
 import 'package:fizmat_app/screens/auth/fizmat_email_input_screen.dart';
@@ -13,7 +14,7 @@ import 'package:fizmat_app/screens/auth/forgot_password_screen.dart';
 import 'package:fizmat_app/screens/auth/login_screen.dart';
 import 'package:fizmat_app/screens/auth/register_screen.dart';
 import 'package:fizmat_app/screens/birthday/birthday.dart';
-import 'package:fizmat_app/screens/friends/friends_list_screen.dart';
+import 'package:fizmat_app/screens/friends/friends_screen.dart';
 import 'package:fizmat_app/screens/functions/functions_menu.dart';
 import 'package:fizmat_app/screens/home/home.dart';
 import 'package:fizmat_app/screens/kundelik/kundelik_connect_screen.dart';
@@ -137,11 +138,14 @@ class MyApp extends StatelessWidget {
                       builder: (_) => const KundelikConnectScreen());
                 case '/friends':
                   return MaterialPageRoute(
-                      builder: (_) => const FriendsListScreen());
+                      builder: (_) => const FriendsScreen());
                 case '/user-profile':
                   final user = settings.arguments as UserModel;
                   return MaterialPageRoute(
                       builder: (_) => UserProfileScreen(user: user));
+                case '/admin':
+                  return MaterialPageRoute(
+                      builder: (_) => const AdminPanelScreen());
                 default:
                   return null;
               }

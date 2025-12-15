@@ -319,9 +319,9 @@ class FizProfile extends StatelessWidget {
           ),
           _buildStatItem(
             theme,
-            l10n.friends,
-            user.friendCount.toString(),
-            Icons.people,
+            l10n.gpa,
+            user.gpa != null ? user.gpa!.toStringAsFixed(2) : '--',
+            Icons.star,
           ),
           Container(
             width: 1,
@@ -330,9 +330,9 @@ class FizProfile extends StatelessWidget {
           ),
           _buildStatItem(
             theme,
-            l10n.privacy,
-            user.isPrivate ? l10n.privateProfile : l10n.publicProfile,
-            user.isPrivate ? Icons.lock : Icons.public,
+            l10n.friends,
+            user.friendCount.toString(),
+            Icons.people,
           ),
         ],
       ),

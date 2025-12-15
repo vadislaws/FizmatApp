@@ -1,9 +1,12 @@
 import 'package:fizmat_app/l10n/app_localizations.dart';
+import 'package:fizmat_app/screens/ap/ap_screen.dart';
 import 'package:fizmat_app/screens/birthday/birthday.dart';
 import 'package:fizmat_app/screens/book/book.dart';
 import 'package:fizmat_app/screens/clubs/clubs_screen.dart';
 import 'package:fizmat_app/screens/formula/formula.dart';
 import 'package:fizmat_app/screens/olympiads/olympiads_screen.dart';
+import 'package:fizmat_app/screens/sat/sat_screen.dart';
+import 'package:fizmat_app/screens/school_info/school_info_screen.dart';
 import 'package:fizmat_app/screens/timetb/timetb.dart';
 import 'package:flutter/material.dart';
 
@@ -92,21 +95,48 @@ class FunctionsMenu extends StatelessWidget {
         ),
       ),
       _MenuItem(
-        title: l10n.translate('birthdays'),
-        icon: Icons.cake,
-        color: Colors.pink,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const FizBirthday()),
-        ),
-      ),
-      _MenuItem(
         title: l10n.translate('books'),
         icon: Icons.menu_book,
         color: Colors.indigo,
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const FizBookOnline()),
+        ),
+      ),
+      _MenuItem(
+        title: 'AP',
+        icon: Icons.school,
+        color: Colors.deepOrange,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const APScreen()),
+        ),
+      ),
+      _MenuItem(
+        title: 'SAT',
+        icon: Icons.assignment,
+        color: Colors.cyan,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SATScreen()),
+        ),
+      ),
+      _MenuItem(
+        title: l10n.translate('school_information'),
+        icon: Icons.school,
+        color: Colors.indigo,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SchoolInfoScreen()),
+        ),
+      ),
+      _MenuItem(
+        title: l10n.translate('birthdays'),
+        icon: Icons.cake,
+        color: Colors.pink,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const FizBirthday()),
         ),
       ),
     ];
