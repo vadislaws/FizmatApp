@@ -15,9 +15,14 @@ class _FizNavBarState extends State<FizNavBar> {
 
   @override
   Widget build(BuildContext context) {
-    const backgroundColor = Color(0xFF111C25);
-    final appBarColor = Theme.of(context).appBarTheme.backgroundColor!;
-    //我不知道为什么“!”
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Use primary color for light theme, dark color for dark theme
+    final backgroundColor = isDark
+        ? const Color(0xFF111C25)
+        : theme.colorScheme.primary;
+    final appBarColor = theme.appBarTheme.backgroundColor!;
 
     return Scaffold(
       body: IndexedStack(

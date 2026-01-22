@@ -1,4 +1,5 @@
 import 'package:fizmat_app/data/schedule_data.dart';
+import 'package:fizmat_app/data/subject_translations.dart';
 import 'package:fizmat_app/l10n/app_localizations.dart';
 import 'package:fizmat_app/models/schedule_models.dart';
 import 'package:fizmat_app/providers/auth_provider.dart';
@@ -274,6 +275,10 @@ class _FizTimetbState extends State<FizTimetb> with SingleTickerProviderStateMix
   }
 
   Widget _buildLessonCard(ThemeData theme, AppLocalizations l10n, Lesson lesson) {
+    // Translate subject name based on current language
+    final languageCode = Localizations.localeOf(context).languageCode;
+    final translatedSubject = SubjectTranslations.translate(lesson.subject, languageCode);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -329,7 +334,7 @@ class _FizTimetbState extends State<FizTimetb> with SingleTickerProviderStateMix
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    lesson.subject,
+                    translatedSubject,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -355,28 +360,8 @@ class _FizTimetbState extends State<FizTimetb> with SingleTickerProviderStateMix
                       ),
                     ],
                   ),
-                  if (lesson.teacher != null) ...[
+                  if (lesson.room != null && lesson.room!.isNotEmpty) ...[
                     const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.person,
-                          size: 16,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          lesson.teacher!,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (lesson.room != null) ...[
-                    const SizedBox(height: 4),
                     Row(
                       children: [
                         Icon(

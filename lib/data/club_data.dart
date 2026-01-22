@@ -75,7 +75,7 @@ class ClubData {
         category: ClubCategory.sports,
       ),
       Club(
-        name: 'tennis club',
+        name: 'Tennis club',
         instagramHandle: '@tennis_nspm',
         leader: ClubLeader(
           firstName: 'Влад',

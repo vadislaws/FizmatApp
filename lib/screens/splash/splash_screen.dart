@@ -1,4 +1,5 @@
 import 'package:fizmat_app/providers/auth_provider.dart';
+import 'package:fizmat_app/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -117,6 +118,9 @@ class _SplashScreenState extends State<SplashScreen>
     // Wait a bit for auth to initialize
     await Future.delayed(const Duration(milliseconds: 300));
 
+    // Check for birthdays and create notifications (runs in background)
+    _checkBirthdaysAndCleanup();
+
     // Fade out animation
     await _fadeController.forward();
 
@@ -129,6 +133,22 @@ class _SplashScreenState extends State<SplashScreen>
     } else {
       // User not logged in - go to login
       Navigator.pushReplacementNamed(context, '/');
+    }
+  }
+
+  /// Check for birthdays and cleanup expired notifications
+  Future<void> _checkBirthdaysAndCleanup() async {
+    try {
+      final notificationService = NotificationService();
+
+      // Create birthday notifications for today (if any)
+      await notificationService.createBirthdayNotifications();
+
+      // Clean up expired notifications (older than 30 days)
+      await notificationService.cleanupExpiredNotifications();
+    } catch (e) {
+      // Silently fail - don't block app startup
+      debugPrint('Error checking birthdays/cleanup: $e');
     }
   }
 

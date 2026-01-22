@@ -21,9 +21,9 @@ class _FizHomeState extends State<FizHome> {
   @override
   void initState() {
     super.initState();
-    // Clean up notifications older than 30 days
-    NotificationService().cleanupOldNotifications().catchError((e) {
-      debugPrint('Error cleaning up old notifications: $e');
+    // Clean up expired notifications (older than 30 days based on expiresAt)
+    NotificationService().cleanupExpiredNotifications().catchError((e) {
+      debugPrint('Error cleaning up expired notifications: $e');
     });
   }
 

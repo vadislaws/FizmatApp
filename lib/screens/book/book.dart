@@ -1,6 +1,6 @@
-import 'package:fizmat_app/data/book_data.dart';
 import 'package:fizmat_app/l10n/app_localizations.dart';
 import 'package:fizmat_app/models/book.dart';
+import 'package:fizmat_app/services/book_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
@@ -40,11 +40,22 @@ class _FizBookOnlineState extends State<FizBookOnline> {
     });
 
     try {
-      // Load books from local data
-      final books = BookData.getAllBooks();
+      // Fetch books from GitHub via BookService
+      final allBooks = await BookService.fetchBooks();
+
+      // TEMPORARY: Filter to show only Algebra 7th grade for testing
+      final books = allBooks.where((book) {
+        // Check if book name contains "Алгебра" or "Algebra" and group is "7"
+        final hasAlgebra = book.names.values.any((name) =>
+          name.toLowerCase().contains('алгебра') ||
+          name.toLowerCase().contains('algebra')
+        );
+        final isGrade7 = book.group == '7';
+        return hasAlgebra && isGrade7;
+      }).toList();
 
       // Extract unique groups and categorize
-      final uniqueGroups = _getUniqueGroups(books);
+      final uniqueGroups = BookService.getUniqueGroups(books);
 
       setState(() {
         _allBooks = books;
@@ -59,40 +70,6 @@ class _FizBookOnlineState extends State<FizBookOnline> {
         _isLoading = false;
       });
     }
-  }
-
-  List<String> _getUniqueGroups(List<BookInfo> books) {
-    final groups = <String>{};
-
-    for (final book in books) {
-      final group = book.group;
-      // Check if it's a grade (7-11)
-      final gradeNumber = int.tryParse(group);
-      if (gradeNumber != null && gradeNumber >= 7 && gradeNumber <= 11) {
-        groups.add(group);
-      } else {
-        // Not a standard grade, add to "Others"
-        groups.add('Others');
-      }
-    }
-
-    final groupList = groups.toList();
-    groupList.sort((a, b) {
-      // Sort numbers first, then "Others" last
-      if (a == 'Others') return 1;
-      if (b == 'Others') return -1;
-
-      final aNum = int.tryParse(a);
-      final bNum = int.tryParse(b);
-
-      if (aNum != null && bNum != null) {
-        return aNum.compareTo(bNum);
-      }
-
-      return a.compareTo(b);
-    });
-
-    return groupList;
   }
 
   void _filterBooks() {
@@ -111,9 +88,9 @@ class _FizBookOnlineState extends State<FizBookOnline> {
           groupMatch = book.group == _selectedGroup;
         }
 
-        // Check search match
+        // Check search match - search in all language names
         final nameMatch = searchQuery.isEmpty ||
-                         book.name.toLowerCase().contains(searchQuery);
+                         book.names.values.any((name) => name.toLowerCase().contains(searchQuery));
 
         return groupMatch && nameMatch;
       }).toList();
@@ -305,6 +282,8 @@ class _FizBookOnlineState extends State<FizBookOnline> {
   }
 
   Widget _buildBookCard(BookInfo book, ThemeData theme) {
+    final languageCode = AppLocalizations.of(context).locale.languageCode;
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -359,7 +338,7 @@ class _FizBookOnlineState extends State<FizBookOnline> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
-                book.name,
+                book.getName(languageCode),
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -390,19 +369,24 @@ class _BookViewerScreenState extends State<BookViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final languageCode = l10n.locale.languageCode;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.book.name),
+        title: Text(widget.book.getName(languageCode)),
         centerTitle: true,
       ),
       body: Stack(
         children: [
           InAppWebView(
             initialUrlRequest: URLRequest(
-              url: WebUri(widget.book.downloadPage),
+              url: WebUri(widget.book.pdfUrl),
             ),
             initialSettings: InAppWebViewSettings(
               mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+              javaScriptEnabled: true,
+              useOnDownloadStart: true,
             ),
             onLoadStart: (controller, url) {
               setState(() {
