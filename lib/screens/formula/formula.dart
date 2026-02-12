@@ -208,7 +208,7 @@ class _FizFormulaState extends State<FizFormula> {
           if (_selectedSubject != null) ...[
             const SizedBox(height: 16),
             Text(
-              'Topic',
+              l10n.translate('topic'),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -221,8 +221,9 @@ class _FizFormulaState extends State<FizFormula> {
               runSpacing: 8,
               children: _getAvailableTopics().map((topic) {
                 final isSelected = _selectedTopic == topic;
+                final translatedTopic = getTopicTranslation(topic, locale.languageCode);
                 return FilterChip(
-                  label: Text(topic),
+                  label: Text(translatedTopic),
                   selected: isSelected,
                   onSelected: (selected) {
                     setState(() {
@@ -313,7 +314,7 @@ class _FizFormulaState extends State<FizFormula> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    formula.topic,
+                    formula.getTopic(locale.languageCode),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

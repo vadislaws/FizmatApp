@@ -135,8 +135,15 @@ class _FizHomeState extends State<FizHome> {
       return const SizedBox();
     }
 
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.userModel;
+
     return StreamBuilder<List<NotificationModel>>(
-      stream: NotificationService().getAllNotifications(),
+      stream: NotificationService().getNotificationsForUser(
+        userId: userId,
+        userGrade: user?.classGradeNumber,
+        userLetter: user?.classLetter,
+      ),
       builder: (context, notificationSnapshot) {
         return StreamBuilder<List<FriendRequestModel>>(
           stream: FriendsService().getPendingRequests(userId),
@@ -207,7 +214,11 @@ class _FizHomeState extends State<FizHome> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => AllNotificationsScreen(userId: userId),
+                            builder: (_) => AllNotificationsScreen(
+                              userId: userId,
+                              userGrade: user?.classGradeNumber,
+                              userLetter: user?.classLetter,
+                            ),
                           ),
                         );
                       },
@@ -258,7 +269,9 @@ class _FizHomeState extends State<FizHome> {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
 
-    if (difference.inMinutes < 60) {
+    if (difference.inMinutes < 1) {
+      return l10n.translate('just_now');
+    } else if (difference.inMinutes < 60) {
       return '${difference.inMinutes}m ${l10n.translate('ago')}';
     } else if (difference.inHours < 24) {
       return '${difference.inHours}h ${l10n.translate('ago')}';
@@ -550,8 +563,15 @@ class _FizHomeState extends State<FizHome> {
 
 class AllNotificationsScreen extends StatelessWidget {
   final String userId;
+  final int? userGrade;
+  final String? userLetter;
 
-  const AllNotificationsScreen({super.key, required this.userId});
+  const AllNotificationsScreen({
+    super.key,
+    required this.userId,
+    this.userGrade,
+    this.userLetter,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -564,7 +584,11 @@ class AllNotificationsScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: StreamBuilder<List<NotificationModel>>(
-        stream: NotificationService().getAllNotifications(),
+        stream: NotificationService().getNotificationsForUser(
+          userId: userId,
+          userGrade: userGrade,
+          userLetter: userLetter,
+        ),
         builder: (context, notificationSnapshot) {
           return StreamBuilder<List<FriendRequestModel>>(
             stream: FriendsService().getPendingRequests(userId),
@@ -683,7 +707,9 @@ class AllNotificationsScreen extends StatelessWidget {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
 
-    if (difference.inMinutes < 60) {
+    if (difference.inMinutes < 1) {
+      return l10n.translate('just_now');
+    } else if (difference.inMinutes < 60) {
       return '${difference.inMinutes}m ${l10n.translate('ago')}';
     } else if (difference.inHours < 24) {
       return '${difference.inHours}h ${l10n.translate('ago')}';

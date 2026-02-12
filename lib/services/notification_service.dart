@@ -17,6 +17,23 @@ class NotificationService {
             .toList());
   }
 
+  /// Get notifications for a specific user (filtered by target)
+  Stream<List<NotificationModel>> getNotificationsForUser({
+    required String userId,
+    int? userGrade,
+    String? userLetter,
+  }) {
+    return getAllNotifications().map((notifications) {
+      return notifications.where((notification) {
+        return notification.shouldShowToUser(
+          userId: userId,
+          userGrade: userGrade,
+          userLetter: userLetter,
+        );
+      }).toList();
+    });
+  }
+
   /// Get notifications with limit
   Stream<List<NotificationModel>> getNotificationsWithLimit(int limit) {
     return _firestore
@@ -29,7 +46,7 @@ class NotificationService {
             .toList());
   }
 
-  /// Create notification (admin only)
+  /// Create notification with targeting support
   Future<void> createNotification({
     required String title,
     required String message,
@@ -38,6 +55,10 @@ class NotificationService {
     String type = 'announcement',
     String? iconName,
     DateTime? expiresAt,
+    NotificationTarget targetType = NotificationTarget.all,
+    int? targetGrade,
+    String? targetLetter,
+    String? targetUserId,
   }) async {
     final now = DateTime.now();
     final expiry = expiresAt ?? now.add(const Duration(days: 30));
@@ -51,15 +72,29 @@ class NotificationService {
       'type': type,
       'iconName': iconName,
       'expiresAt': expiry.toIso8601String(),
+      'targetType': targetType.name,
+      'targetGrade': targetGrade,
+      'targetLetter': targetLetter,
+      'targetUserId': targetUserId,
     });
   }
 
-  /// Delete notification (admin only)
+  /// Delete notification
   Future<void> deleteNotification(String notificationId) async {
     await _firestore.collection('notifications').doc(notificationId).delete();
   }
 
-  /// Update notification (admin only)
+  /// Check if user can delete notification (creator or moderator)
+  bool canDeleteNotification(NotificationModel notification, UserModel user) {
+    // Moderators can delete any notification
+    if (user.position == 'moderator' || user.position == 'admin') {
+      return true;
+    }
+    // Creators can delete their own notifications
+    return notification.createdBy == user.uid;
+  }
+
+  /// Update notification
   Future<void> updateNotification({
     required String notificationId,
     required String title,
@@ -92,6 +127,20 @@ class NotificationService {
     await batch.commit();
   }
 
+  /// Search users for targeting
+  Future<List<UserModel>> searchUsersForTarget(String query) async {
+    if (query.isEmpty) return [];
+
+    final queryLower = query.toLowerCase();
+    final results = await _firestore.collection('users').get();
+
+    return results.docs
+        .map((doc) => UserModel.fromMap(doc.data()))
+        .where((user) => user.fullName.toLowerCase().contains(queryLower))
+        .take(10)
+        .toList();
+  }
+
   /// Get all users with birthday today
   Future<List<UserModel>> getUsersWithBirthdayToday() async {
     final now = DateTime.now();
@@ -100,54 +149,44 @@ class NotificationService {
 
     final birthdayUsers = <UserModel>[];
 
-    debugPrint('🎂 Checking birthdays for ${now.month}/${now.day}');
-    debugPrint('📊 Total users: ${allUsers.docs.length}');
+    debugPrint('Checking birthdays for ${now.month}/${now.day}');
+    debugPrint('Total users: ${allUsers.docs.length}');
 
     for (final doc in allUsers.docs) {
       try {
         final user = UserModel.fromMap(doc.data());
 
         if (user.birthday != null) {
-          debugPrint('👤 User ${user.fullName}: birthday ${user.birthday!.month}/${user.birthday!.day}');
-
-          // Simply compare month and day, ignore year
           if (user.birthday!.month == now.month && user.birthday!.day == now.day) {
-            debugPrint('🎉 Found birthday user: ${user.fullName} (${user.birthday})');
+            debugPrint('Found birthday user: ${user.fullName} (${user.birthday})');
             birthdayUsers.add(user);
           }
         }
       } catch (e) {
-        // Skip users with invalid data
-        debugPrint('⚠️ Error parsing user: $e');
         continue;
       }
     }
 
-    debugPrint('✅ Birthday users found: ${birthdayUsers.length}');
+    debugPrint('Birthday users found: ${birthdayUsers.length}');
     return birthdayUsers;
   }
 
   /// Create birthday notifications for users with birthday today
-  /// Should be called once per day (e.g., at midnight or app startup)
   Future<void> createBirthdayNotifications() async {
-    debugPrint('🚀 Starting createBirthdayNotifications()');
+    debugPrint('Starting createBirthdayNotifications()');
 
     final birthdayUsers = await getUsersWithBirthdayToday();
 
     if (birthdayUsers.isEmpty) {
-      debugPrint('ℹ️ No birthday users found today');
+      debugPrint('No birthday users found today');
       return;
     }
 
-    debugPrint('🎂 Found ${birthdayUsers.length} users with birthdays today');
+    debugPrint('Found ${birthdayUsers.length} users with birthdays today');
 
-    // Check if we already created birthday notifications today
-    // Fetch all birthday-type notifications and filter in code to avoid complex Firestore queries
     final today = DateTime.now();
     final todayStart = DateTime(today.year, today.month, today.day);
     final todayEnd = todayStart.add(const Duration(days: 1));
-
-    debugPrint('📅 Checking for existing notifications from ${todayStart.toIso8601String()}');
 
     try {
       final allBirthdayNotifications = await _firestore
@@ -155,50 +194,33 @@ class NotificationService {
           .where('type', isEqualTo: 'birthday')
           .get();
 
-      debugPrint('📊 Total birthday notifications in database: ${allBirthdayNotifications.docs.length}');
-
-      // Filter for notifications created today
       final todayBirthdayNotifications = allBirthdayNotifications.docs.where((doc) {
         final data = doc.data();
         if (data['createdAt'] == null) return false;
 
         try {
           final createdAt = DateTime.parse(data['createdAt']);
-          final isToday = createdAt.isAfter(todayStart.subtract(const Duration(seconds: 1))) &&
+          return createdAt.isAfter(todayStart.subtract(const Duration(seconds: 1))) &&
               createdAt.isBefore(todayEnd);
-
-          if (isToday) {
-            debugPrint('📋 Found existing notification created at ${createdAt.toIso8601String()}');
-          }
-
-          return isToday;
         } catch (e) {
-          debugPrint('⚠️ Error parsing notification createdAt: $e');
           return false;
         }
       }).toList();
 
-      debugPrint('📊 Birthday notifications created today: ${todayBirthdayNotifications.length}');
-
-      // If we already created birthday notifications today, skip
       if (todayBirthdayNotifications.isNotEmpty) {
-        debugPrint('⚠️ Birthday notifications already created today, skipping');
+        debugPrint('Birthday notifications already created today, skipping');
         return;
       }
     } catch (e) {
-      debugPrint('❌ Error checking existing notifications: $e');
-      // Continue anyway - better to potentially create duplicates than to skip
+      debugPrint('Error checking existing notifications: $e');
     }
 
-    // Create birthday notifications for each user
-    debugPrint('✍️ Creating birthday notifications for ${birthdayUsers.length} users...');
+    debugPrint('Creating birthday notifications for ${birthdayUsers.length} users...');
     int successCount = 0;
 
     for (final user in birthdayUsers) {
-      const title = '🎉 День рождения!';
-      final message = 'Сегодня день рождения у ${user.fullName}! Поздравьте их! 🎂';
-
-      debugPrint('📝 Creating notification for ${user.fullName}');
+      const title = 'День рождения!';
+      final message = 'Сегодня день рождения у ${user.fullName}! Поздравьте их!';
 
       try {
         await createNotification(
@@ -212,12 +234,12 @@ class NotificationService {
         );
 
         successCount++;
-        debugPrint('✅ Notification created for ${user.fullName} (${successCount}/${birthdayUsers.length})');
+        debugPrint('Notification created for ${user.fullName} ($successCount/${birthdayUsers.length})');
       } catch (e) {
-        debugPrint('❌ Error creating notification for ${user.fullName}: $e');
+        debugPrint('Error creating notification for ${user.fullName}: $e');
       }
     }
 
-    debugPrint('🎉 Birthday notification creation complete! Created $successCount out of ${birthdayUsers.length}');
+    debugPrint('Birthday notification creation complete! Created $successCount out of ${birthdayUsers.length}');
   }
 }

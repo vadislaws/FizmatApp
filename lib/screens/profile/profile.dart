@@ -1,15 +1,19 @@
-import 'dart:io';
 import 'package:fizmat_app/l10n/app_localizations.dart';
 import 'package:fizmat_app/providers/auth_provider.dart';
-import 'package:fizmat_app/providers/kundelik_provider.dart';
+import 'package:fizmat_app/services/kundelik_session_manager.dart';
 import 'package:fizmat_app/widgets/language_switcher.dart';
 import 'package:fizmat_app/widgets/theme_switcher.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 class FizProfile extends StatelessWidget {
   const FizProfile({super.key});
+
+  /// Check if user has admin panel access
+  bool _hasAdminAccess(String position) {
+    const adminRoles = ['admin', 'moderator', 'teacher', 'school_government'];
+    return adminRoles.contains(position);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,14 +58,13 @@ class FizProfile extends StatelessWidget {
               // Settings Section
               _buildSettingsSection(context, theme, l10n),
               const SizedBox(height: 20),
-              // Kundelik Section (only for students)
-              if (user.position == 'student')
-                _buildKundelikSection(context, theme, l10n, user, authProvider),
-              if (user.position == 'student') const SizedBox(height: 20),
-              // Admin Panel Button (only for admins)
-              if (user.position == 'admin')
+              // Kundelik Section
+              _buildKundelikSection(context, theme, l10n, user, authProvider),
+              const SizedBox(height: 20),
+              // Admin Panel Button (for admin roles)
+              if (_hasAdminAccess(user.position))
                 _buildAdminPanelButton(context, theme, l10n),
-              if (user.position == 'admin') const SizedBox(height: 20),
+              if (_hasAdminAccess(user.position)) const SizedBox(height: 20),
               // Logout Button
               _buildLogoutButton(context, theme, l10n, authProvider),
               const SizedBox(height: 20),
@@ -81,70 +84,39 @@ class FizProfile extends StatelessWidget {
   ) {
     return Column(
       children: [
-        // Avatar with Upload Button
-        Stack(
-          children: [
-            GestureDetector(
-              onTap: () => _showAvatarOptions(context, authProvider),
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      theme.colorScheme.primary,
-                      theme.colorScheme.secondary,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: user.avatarUrl != null
-                    ? ClipOval(
-                        child: Image.network(
-                          user.avatarUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return _buildDefaultAvatar(theme, user.fullName);
-                          },
-                        ),
-                      )
-                    : _buildDefaultAvatar(theme, user.fullName),
-              ),
+        // Avatar (display only)
+        Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [
+                theme.colorScheme.primary,
+                theme.colorScheme.secondary,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: GestureDetector(
-                onTap: () => _showAvatarOptions(context, authProvider),
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: theme.scaffoldBackgroundColor,
-                      width: 3,
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.camera_alt,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
-            ),
-          ],
+            ],
+          ),
+          child: user.avatarUrl != null
+              ? ClipOval(
+                  child: Image.network(
+                    user.avatarUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return _buildDefaultAvatar(theme, user.fullName);
+                    },
+                  ),
+                )
+              : _buildDefaultAvatar(theme, user.fullName),
         ),
         const SizedBox(height: 16),
         // Full Name
@@ -824,135 +796,6 @@ class FizProfile extends StatelessWidget {
     );
   }
 
-  void _showAvatarOptions(BuildContext context, AuthProvider authProvider) {
-    final l10n = AppLocalizations.of(context);
-
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: Text(l10n.chooseFromGallery),
-              onTap: () async {
-                Navigator.pop(context);
-                await _pickImage(context, authProvider, ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: Text(l10n.takePhoto),
-              onTap: () async {
-                Navigator.pop(context);
-                await _pickImage(context, authProvider, ImageSource.camera);
-              },
-            ),
-            if (authProvider.userModel?.avatarUrl != null)
-              ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
-                title: Text(
-                  l10n.removeAvatar,
-                  style: const TextStyle(color: Colors.red),
-                ),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await authProvider.updateProfile(avatarUrl: '');
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.avatarRemoved),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pickImage(
-    BuildContext context,
-    AuthProvider authProvider,
-    ImageSource source,
-  ) async {
-    final l10n = AppLocalizations.of(context);
-
-    try {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(
-        source: source,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
-      );
-
-      if (pickedFile == null) return;
-
-      if (!context.mounted) return;
-
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => Center(
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text(l10n.loading),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-
-      final imageFile = File(pickedFile.path);
-      final url = await authProvider.uploadAvatar(imageFile);
-
-      if (!context.mounted) return;
-
-      // Close loading dialog
-      Navigator.pop(context);
-
-      if (url != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.avatarUpdated),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.avatarUploadFailed),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        // Close loading dialog if open
-        Navigator.of(context, rootNavigator: true).pop();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${l10n.error}: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   void _showEditProfileDialog(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final user = authProvider.userModel;
@@ -1015,26 +858,40 @@ class FizProfile extends StatelessWidget {
     );
 
     try {
-      // Import KundelikProvider
-      final kundelikProvider = Provider.of<KundelikProvider>(context, listen: false);
-
-      // Sync data
-      final data = await kundelikProvider.syncData();
+      // Use KundelikSessionManager to sync data
+      final sessionManager = KundelikSessionManager.instance;
+      final data = await sessionManager.syncData();
 
       if (data != null) {
+        // Extract GPA and birthday
+        final double? gpa = data['gpa']?.toDouble();
+        final DateTime? birthday = data['birthday'];
+
         // Update auth provider with new data
         await authProvider.updateKundelikData(
           isConnected: true,
-          gpa: data['gpa'],
-          birthday: data['birthday'],
-          kundelikData: data['fullData'],
+          gpa: gpa,
+          birthday: birthday,
+          kundelikData: {
+            'userInfo': data['userInfo'],
+            'schoolInfo': data['schoolInfo'],
+            'marksCount': data['marksCount'],
+            'syncedAt': data['syncedAt'],
+          },
         );
 
         if (context.mounted) {
           Navigator.pop(context); // Close loading dialog
+
+          // Show success message with GPA
+          String message = l10n.translate('sync_success') ?? '${l10n.syncKundelik} ${l10n.success.toLowerCase()}';
+          if (gpa != null && gpa > 0) {
+            message += ' | GPA: ${gpa.toStringAsFixed(2)}';
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${l10n.syncKundelik} ${l10n.success.toLowerCase()}'),
+              content: Text(message),
               backgroundColor: Colors.green,
             ),
           );
@@ -1044,7 +901,7 @@ class FizProfile extends StatelessWidget {
           Navigator.pop(context); // Close loading dialog
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(kundelikProvider.errorMessage ?? l10n.error),
+              content: Text(l10n.translate('kundelik_sync_failed') ?? l10n.error),
               backgroundColor: Colors.red,
             ),
           );

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:fizmat_app/l10n/app_localizations.dart';
 import 'package:fizmat_app/providers/auth_provider.dart';
 import 'package:fizmat_app/providers/kundelik/kundelik_auth.dart';
@@ -184,25 +186,32 @@ class _KundelikConnectScreenState extends State<KundelikConnectScreen> {
 
       kunAPI.token = accessToken;
 
-      // Get user info
-      final userInfo = await kunAPI.getInfo();
-      final schoolInfo = await kunAPI.getSchool();
+      // Sync full data including GPA
+      final fullData = await kunAPI.syncFullData();
 
-      // Save token to local storage
+      // Save token and credentials to local storage for persistent session
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('kundelik_access_token', accessToken);
       await prefs.setString('kundelik_username', _usernameController.text.trim());
-      await prefs.setString('kundelik_user_info', userInfo.toString());
+      // Store encrypted credentials for auto-login (base64 encoded for basic obfuscation)
+      final encodedPassword = base64Encode(utf8.encode(_passwordController.text.trim()));
+      await prefs.setString('kundelik_credentials', encodedPassword);
+      await prefs.setBool('kundelik_connected', true);
+
+      // Extract GPA and birthday
+      final double? gpa = fullData['gpa']?.toDouble();
+      final DateTime? birthday = fullData['birthday'];
 
       // Update user profile with Kundelik data
       await authProvider.updateKundelikData(
         isConnected: true,
-        gpa: null, // Will be calculated from marks later
-        birthday: null, // Will be fetched from person info later
+        gpa: gpa,
+        birthday: birthday,
         kundelikData: {
-          'userInfo': userInfo,
-          'schoolInfo': schoolInfo,
-          'syncedAt': DateTime.now().toIso8601String(),
+          'userInfo': fullData['userInfo'],
+          'schoolInfo': fullData['schoolInfo'],
+          'marksCount': fullData['marksCount'],
+          'syncedAt': fullData['syncedAt'],
         },
       );
 
@@ -210,9 +219,16 @@ class _KundelikConnectScreenState extends State<KundelikConnectScreen> {
         setState(() {
           _isLoading = false;
         });
+
+        // Show success with GPA if available
+        String message = l10n.kundelikConnected;
+        if (gpa != null && gpa > 0) {
+          message += ' | GPA: ${gpa.toStringAsFixed(2)}';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.kundelikConnected),
+            content: Text(message),
             backgroundColor: Colors.green,
           ),
         );

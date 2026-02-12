@@ -22,11 +22,47 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
   List<UserModel> _allUsers = [];
   List<UserModel> _searchResults = [];
   bool _isSearching = false;
+  List<UserModel> _recommendations = [];
+  bool _isLoadingRecommendations = false;
+  bool _showRecommendations = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadRecommendations();
+  }
+
+  Future<void> _loadRecommendations() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.userModel;
+    if (user == null) return;
+
+    setState(() {
+      _isLoadingRecommendations = true;
+    });
+
+    try {
+      final recommendations = await _friendsService.getFriendRecommendations(
+        uid: user.uid,
+        userGrade: user.classGradeNumber,
+        userLetter: user.classLetter,
+        limit: 10,
+      );
+
+      if (mounted) {
+        setState(() {
+          _recommendations = recommendations;
+          _isLoadingRecommendations = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingRecommendations = false;
+        });
+      }
+    }
   }
 
   @override
@@ -172,7 +208,7 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
       );
     }
 
-    // Otherwise show friends list
+    // Otherwise show friends list with recommendations
     return StreamBuilder<List<String>>(
       stream: _friendsService.getFriendsList(uid),
       builder: (context, snapshot) {
@@ -192,58 +228,232 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
           children: [
             _buildSearchBar(context, theme, l10n, uid),
             Expanded(
-              child: friendIds.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.people_outline,
-                            size: 80,
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            l10n.translate('no_friends'),
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Use the search bar above to find friends',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    )
-                  : FutureBuilder<List<UserModel>>(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  // Recommendations section
+                  if (_showRecommendations && _recommendations.isNotEmpty) ...[
+                    _buildRecommendationsSection(context, theme, l10n, uid),
+                    const SizedBox(height: 16),
+                  ],
+                  // Friends list or empty state
+                  if (friendIds.isEmpty)
+                    _buildEmptyFriendsState(theme, l10n)
+                  else
+                    FutureBuilder<List<UserModel>>(
                       future: _friendsService.getFriendsData(friendIds),
                       builder: (context, friendsSnapshot) {
                         if (friendsSnapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(32),
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
                         }
 
                         final friends = friendsSnapshot.data ?? [];
 
-                        return ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: friends.length,
-                          itemBuilder: (context, index) {
-                            return _buildFriendCard(context, theme, friends[index], uid);
-                          },
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Text(
+                                '${l10n.translate('friends')} (${friends.length})',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                            ...friends.map((friend) => _buildFriendCard(context, theme, friend, uid)),
+                          ],
                         );
                       },
                     ),
+                ],
+              ),
             ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildEmptyFriendsState(ThemeData theme, AppLocalizations l10n) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 80,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.translate('no_friends'),
+              style: TextStyle(
+                fontSize: 16,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.translate('use_search_to_find_friends'),
+              style: TextStyle(
+                fontSize: 14,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecommendationsSection(BuildContext context, ThemeData theme, AppLocalizations l10n, String uid) {
+    if (_isLoadingRecommendations) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              l10n.translate('recommended_friends'),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            TextButton(
+              onPressed: _loadRecommendations,
+              child: Text(l10n.translate('refresh')),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 140,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _recommendations.length,
+            itemBuilder: (context, index) {
+              return _buildRecommendationCard(context, theme, l10n, _recommendations[index], uid);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecommendationCard(
+    BuildContext context,
+    ThemeData theme,
+    AppLocalizations l10n,
+    UserModel user,
+    String currentUid,
+  ) {
+    return Container(
+      width: 120,
+      margin: const EdgeInsets.only(right: 12),
+      child: Card(
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => FriendProfileScreen(userId: user.uid),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
+                  child: user.avatarUrl == null
+                      ? Text(
+                          user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : '?',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        )
+                      : null,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  user.fullName.split(' ').first,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+                Text(
+                  user.formattedClass,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                SizedBox(
+                  height: 24,
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      try {
+                        await _friendsService.sendFriendRequest(currentUid, user.uid);
+                        setState(() {
+                          _recommendations.remove(user);
+                        });
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.translate('request_sent'))),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('${l10n.translate('error')}: $e')),
+                          );
+                        }
+                      }
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: Size.zero,
+                    ),
+                    child: Text(
+                      l10n.translate('add'),
+                      style: const TextStyle(fontSize: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

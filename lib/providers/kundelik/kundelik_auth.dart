@@ -144,4 +144,142 @@ class KunAPI extends KunBase {
     final response = await get("users/me");
     return response;
   }
+
+  /// Get person info including birthday
+  Future<Map<String, dynamic>> getPerson(int personId) async {
+    final response = await get("persons/$personId");
+    return response;
+  }
+
+  /// Get user's context (school, class, student info)
+  Future<Map<String, dynamic>> getContext() async {
+    final response = await get("users/me/context");
+    return response;
+  }
+
+  /// Get student's edu groups (classes)
+  Future<List<dynamic>> getEduGroups(int personId) async {
+    final response = await get("persons/$personId/edu-groups");
+    return response['items'] ?? [];
+  }
+
+  /// Get final marks for a reporting period
+  Future<List<dynamic>> getFinalMarks(int groupId, int personId) async {
+    try {
+      final response = await get("edu-groups/$groupId/final-marks", params: {
+        'person': personId.toString(),
+      });
+      return response['items'] ?? [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get recent marks/grades
+  Future<List<dynamic>> getRecentMarks(int personId, {int days = 30}) async {
+    try {
+      final now = DateTime.now();
+      final from = now.subtract(Duration(days: days));
+
+      final response = await get("persons/$personId/marks", params: {
+        'from': from.toIso8601String().split('T')[0],
+        'to': now.toIso8601String().split('T')[0],
+      });
+      return response['items'] ?? [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get all marks for current academic year
+  Future<List<dynamic>> getAllMarks(int personId) async {
+    try {
+      // Get current academic year period
+      final now = DateTime.now();
+      final yearStart = now.month >= 9
+          ? DateTime(now.year, 9, 1)
+          : DateTime(now.year - 1, 9, 1);
+
+      final response = await get("persons/$personId/marks", params: {
+        'from': yearStart.toIso8601String().split('T')[0],
+        'to': now.toIso8601String().split('T')[0],
+      });
+      return response['items'] ?? [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Calculate GPA from marks
+  double calculateGPA(List<dynamic> marks) {
+    if (marks.isEmpty) return 0.0;
+
+    final numericMarks = <double>[];
+    for (final mark in marks) {
+      // Try different field names for mark value
+      final value = mark['value'] ?? mark['mark'] ?? mark['grade'];
+      if (value != null) {
+        if (value is num) {
+          numericMarks.add(value.toDouble());
+        } else if (value is String) {
+          final parsed = double.tryParse(value);
+          if (parsed != null) {
+            numericMarks.add(parsed);
+          }
+        }
+      }
+    }
+
+    if (numericMarks.isEmpty) return 0.0;
+    final sum = numericMarks.reduce((a, b) => a + b);
+    return sum / numericMarks.length;
+  }
+
+  /// Sync all student data (info, marks, GPA)
+  Future<Map<String, dynamic>> syncFullData() async {
+    final result = <String, dynamic>{};
+
+    // Get user info
+    final userInfo = await getInfo();
+    result['userInfo'] = userInfo;
+
+    final personId = userInfo['personId'] as int?;
+    if (personId == null) {
+      throw KunError('Could not get person ID');
+    }
+
+    // Get person info for birthday
+    try {
+      final personInfo = await getPerson(personId);
+      result['personInfo'] = personInfo;
+
+      if (personInfo['birthday'] != null) {
+        result['birthday'] = DateTime.parse(personInfo['birthday']);
+      }
+    } catch (e) {
+      // Birthday fetch failed, continue
+    }
+
+    // Get school info
+    try {
+      final schoolInfo = await getSchool();
+      result['schoolInfo'] = schoolInfo;
+    } catch (e) {
+      // School fetch failed, continue
+    }
+
+    // Get marks and calculate GPA
+    try {
+      final marks = await getAllMarks(personId);
+      result['marks'] = marks;
+      result['gpa'] = calculateGPA(marks);
+      result['marksCount'] = marks.length;
+    } catch (e) {
+      result['gpa'] = null;
+    }
+
+    result['syncedAt'] = DateTime.now().toIso8601String();
+
+    return result;
+  }
 }

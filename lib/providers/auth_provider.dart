@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fizmat_app/models/user_model.dart';
 import 'package:fizmat_app/services/auth_service.dart';
@@ -10,6 +12,7 @@ class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final EmailVerificationService _emailVerificationService =
       EmailVerificationService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   UserModel? _userModel;
   bool _isLoading = false;
@@ -17,6 +20,7 @@ class AuthProvider with ChangeNotifier {
   String? _errorCode;  // Store error code for localization
   String? _successMessage;
   String? _successCode;  // Store success code for localization
+  StreamSubscription<DocumentSnapshot>? _userDocSubscription;
 
   UserModel? get userModel => _userModel;
   bool get isLoading => _isLoading;
@@ -31,11 +35,41 @@ class AuthProvider with ChangeNotifier {
       if (user != null) {
         _userModel = await _authService.getUserData(user.uid);
         notifyListeners();
+        // Start listening to user document changes for real-time updates
+        _startUserDocListener(user.uid);
       } else {
         _userModel = null;
+        _stopUserDocListener();
         notifyListeners();
       }
     });
+  }
+
+  /// Start listening to user document changes in Firestore
+  void _startUserDocListener(String uid) {
+    _stopUserDocListener(); // Cancel any existing listener
+    _userDocSubscription = _firestore
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.exists && snapshot.data() != null) {
+        _userModel = UserModel.fromMap(snapshot.data()!);
+        notifyListeners();
+      }
+    });
+  }
+
+  /// Stop listening to user document changes
+  void _stopUserDocListener() {
+    _userDocSubscription?.cancel();
+    _userDocSubscription = null;
+  }
+
+  @override
+  void dispose() {
+    _stopUserDocListener();
+    super.dispose();
   }
 
   Future<bool> signInWithEmailAndPassword(String email, String password) async {
