@@ -14,38 +14,42 @@ class ThemeSwitcher extends StatelessWidget {
     final currentMode = themeProvider.themeMode;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _ThemeButton(
-            label: l10n.lightTheme,
-            icon: Icons.light_mode,
-            isSelected: currentMode == AppThemeMode.light,
-            onTap: () => themeProvider.setThemeMode(AppThemeMode.light),
-            theme: theme,
-          ),
-          const SizedBox(width: 4),
-          _ThemeButton(
-            label: l10n.darkTheme,
-            icon: Icons.dark_mode,
-            isSelected: currentMode == AppThemeMode.dark,
-            onTap: () => themeProvider.setThemeMode(AppThemeMode.dark),
-            theme: theme,
-          ),
-          const SizedBox(width: 4),
-          _ThemeButton(
-            label: l10n.autoTheme,
-            icon: Icons.brightness_auto,
-            isSelected: currentMode == AppThemeMode.system,
-            onTap: () => themeProvider.setThemeMode(AppThemeMode.system),
-            theme: theme,
-          ),
-        ],
+      constraints: const BoxConstraints(maxWidth: 200),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ThemeButton(
+              label: l10n.lightTheme,
+              icon: Icons.light_mode,
+              isSelected: currentMode == AppThemeMode.light,
+              onTap: () => themeProvider.setThemeMode(AppThemeMode.light),
+              theme: theme,
+            ),
+            const SizedBox(width: 2),
+            _ThemeButton(
+              label: l10n.darkTheme,
+              icon: Icons.dark_mode,
+              isSelected: currentMode == AppThemeMode.dark,
+              onTap: () => themeProvider.setThemeMode(AppThemeMode.dark),
+              theme: theme,
+            ),
+            const SizedBox(width: 2),
+            _ThemeButton(
+              label: l10n.autoTheme,
+              icon: Icons.brightness_auto,
+              isSelected: currentMode == AppThemeMode.system,
+              onTap: () => themeProvider.setThemeMode(AppThemeMode.system),
+              theme: theme,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -72,30 +76,35 @@ class _ThemeButton extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: isSelected ? theme.colorScheme.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
-        child: Row(
+        child: Flex(
+          direction: Axis.horizontal,
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              size: 16,
+              size: 12,
               color: isSelected
                   ? Colors.white
                   : theme.colorScheme.onSurface.withOpacity(0.7),
             ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected
-                    ? Colors.white
-                    : theme.colorScheme.onSurface.withOpacity(0.7),
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                fontSize: 12,
+            const SizedBox(width: 1),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isSelected
+                      ? Colors.white
+                      : theme.colorScheme.onSurface.withOpacity(0.7),
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  fontSize: 8,
+                ),
               ),
             ),
           ],

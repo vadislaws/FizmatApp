@@ -370,7 +370,7 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
     String currentUid,
   ) {
     return Container(
-      width: 120,
+      width: 110,
       margin: const EdgeInsets.only(right: 12),
       child: Card(
         child: InkWell(
@@ -384,41 +384,48 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
           },
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
-                  child: user.avatarUrl == null
-                      ? Text(
-                          user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : '?',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        )
-                      : null,
+                Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
+                      child: user.avatarUrl == null
+                          ? Text(
+                              user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : '?',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      user.fullName.split(' ').first,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                    Text(
+                      user.formattedClass,
+                      style: TextStyle(
+                        fontSize: 8,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  user.fullName.split(' ').first,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-                Text(
-                  user.formattedClass,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-                const SizedBox(height: 4),
                 SizedBox(
-                  height: 24,
+                  width: double.infinity,
+                  height: 26,
                   child: OutlinedButton(
                     onPressed: () async {
                       try {
@@ -440,12 +447,15 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
                       }
                     },
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      padding: EdgeInsets.zero,
                       minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     child: Text(
                       l10n.translate('add'),
-                      style: const TextStyle(fontSize: 10),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 8),
                     ),
                   ),
                 ),
