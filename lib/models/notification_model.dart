@@ -10,23 +10,27 @@ class NotificationModel {
   final String id;
   final String title;
   final String message;
+  final Map<String, String> titles;
+  final Map<String, String> messages;
   final DateTime createdAt;
-  final String createdBy; // Admin UID who created this
-  final String createdByName; // Admin name for display
-  final String type; // e.g., 'announcement', 'event', 'alert', 'birthday'
-  final String? iconName; // Icon name for display
-  final DateTime? expiresAt; // When notification should be deleted (default: 30 days from creation)
+  final String createdBy;
+  final String createdByName;
+  final String type;
+  final String? iconName;
+  final DateTime? expiresAt;
 
   // Targeting fields
   final NotificationTarget targetType;
-  final int? targetGrade;      // Grade number (7-11)
-  final String? targetLetter;   // Class letter (A-K)
-  final String? targetUserId;   // Specific user ID
+  final int? targetGrade;
+  final String? targetLetter;
+  final String? targetUserId;
 
   NotificationModel({
     required this.id,
     required this.title,
     required this.message,
+    Map<String, String>? titles,
+    Map<String, String>? messages,
     required this.createdAt,
     required this.createdBy,
     required this.createdByName,
@@ -37,17 +41,34 @@ class NotificationModel {
     this.targetGrade,
     this.targetLetter,
     this.targetUserId,
-  }) : expiresAt = expiresAt ?? createdAt.add(const Duration(days: 30));
+  })  : titles = titles ?? {},
+        messages = messages ?? {},
+        expiresAt = expiresAt ?? createdAt.add(const Duration(days: 30));
+
+  String getLocalizedTitle(String languageCode) {
+    return titles[languageCode] ?? titles['ru'] ?? titles['en'] ?? title;
+  }
+
+  String getLocalizedMessage(String languageCode) {
+    return messages[languageCode] ?? messages['ru'] ?? messages['en'] ?? message;
+  }
 
   factory NotificationModel.fromMap(Map<String, dynamic> map, String id) {
     final createdAt = map['createdAt'] != null
         ? DateTime.parse(map['createdAt'])
         : DateTime.now();
 
+    Map<String, String> parseTitles(dynamic raw) {
+      if (raw is Map) return raw.map((k, v) => MapEntry(k.toString(), v.toString()));
+      return {};
+    }
+
     return NotificationModel(
       id: id,
       title: map['title'] ?? '',
       message: map['message'] ?? '',
+      titles: parseTitles(map['titles']),
+      messages: parseTitles(map['messages']),
       createdAt: createdAt,
       createdBy: map['createdBy'] ?? '',
       createdByName: map['createdByName'] ?? 'Admin',
@@ -70,6 +91,8 @@ class NotificationModel {
     return {
       'title': title,
       'message': message,
+      if (titles.isNotEmpty) 'titles': titles,
+      if (messages.isNotEmpty) 'messages': messages,
       'createdAt': createdAt.toIso8601String(),
       'createdBy': createdBy,
       'createdByName': createdByName,

@@ -58,21 +58,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildLogo(ThemeData theme, bool isDark) {
     return Container(
-      width: 80,
-      height: 80,
+      width: 100,
+      height: 100,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Center(
-        child: Text(
-          'F',
-          style: TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
-        ),
+        ],
+      ),
+      child: Image.asset(
+        'assets/rfmsh_logo.jpg',
+        fit: BoxFit.cover,
       ),
     );
   }
@@ -263,8 +264,9 @@ class _LoginScreenState extends State<LoginScreen> {
         final errorMessage = l10n.getAuthErrorMessage(authProvider.errorCode);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(errorMessage),
+            content: Text('$errorMessage [${authProvider.errorCode}]'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 8),
           ),
         );
       }

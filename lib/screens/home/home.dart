@@ -157,12 +157,12 @@ class _FizHomeState extends State<FizHome> {
                   FutureBuilder<String>(
                     future: _getSenderName(request.fromUserId),
                     builder: (context, senderSnapshot) {
-                      final senderName = senderSnapshot.data ?? 'Someone';
+                      final senderName = senderSnapshot.data ?? l10n.translate('someone');
                       return _buildNotificationCard(
                         context,
                         theme,
                         title: l10n.translate('friend_requests'),
-                        subtitle: '$senderName has sent you an invite to be friends',
+                        subtitle: '$senderName ${l10n.translate('friend_request_sent')}',
                         time: _getTimeAgo(request.createdAt, l10n),
                         icon: Icons.person_add,
                         color: Colors.purple,
@@ -179,13 +179,14 @@ class _FizHomeState extends State<FizHome> {
 
             // Add admin notifications
             if (notificationSnapshot.hasData && notificationSnapshot.data!.isNotEmpty) {
+              final lang = l10n.locale.languageCode;
               for (final notification in notificationSnapshot.data!) {
                 notificationWidgets.add(
                   _buildNotificationCard(
                     context,
                     theme,
-                    title: notification.title,
-                    subtitle: notification.message,
+                    title: notification.getLocalizedTitle(lang),
+                    subtitle: notification.getLocalizedMessage(lang),
                     time: _getTimeAgo(notification.createdAt, l10n),
                     icon: _getIconFromName(notification.iconName),
                     color: _getColorFromType(notification.type),
@@ -602,13 +603,13 @@ class AllNotificationsScreen extends StatelessWidget {
                     FutureBuilder<String>(
                       future: _getSenderName(request.fromUserId),
                       builder: (context, senderSnapshot) {
-                        final senderName = senderSnapshot.data ?? 'Someone';
+                        final senderName = senderSnapshot.data ?? l10n.translate('someone');
                         return _buildNotificationCard(
                           context,
                           theme,
                           l10n,
                           title: l10n.translate('friend_requests'),
-                          subtitle: '$senderName has sent you an invite to be friends',
+                          subtitle: '$senderName ${l10n.translate('friend_request_sent')}',
                           time: _getTimeAgo(request.createdAt, l10n),
                           icon: Icons.person_add,
                           color: Colors.purple,
@@ -624,14 +625,15 @@ class AllNotificationsScreen extends StatelessWidget {
 
               // Add admin notifications
               if (notificationSnapshot.hasData) {
+                final lang = l10n.locale.languageCode;
                 for (final notification in notificationSnapshot.data!) {
                   notificationWidgets.add(
                     _buildNotificationCard(
                       context,
                       theme,
                       l10n,
-                      title: notification.title,
-                      subtitle: notification.message,
+                      title: notification.getLocalizedTitle(lang),
+                      subtitle: notification.getLocalizedMessage(lang),
                       time: _getTimeAgo(notification.createdAt, l10n),
                       icon: _getIconFromName(notification.iconName),
                       color: _getColorFromType(notification.type),

@@ -14,11 +14,20 @@ class CreateNotificationScreen extends StatefulWidget {
       _CreateNotificationScreenState();
 }
 
-class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
+class _CreateNotificationScreenState extends State<CreateNotificationScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _messageController = TextEditingController();
+
+  // Per-language title/message controllers (RU is required; KK and EN optional)
+  final _titleRu = TextEditingController();
+  final _titleKk = TextEditingController();
+  final _titleEn = TextEditingController();
+  final _messageRu = TextEditingController();
+  final _messageKk = TextEditingController();
+  final _messageEn = TextEditingController();
   final _userSearchController = TextEditingController();
+
+  late final TabController _tabController;
   final NotificationService _notificationService = NotificationService();
 
   bool _isLoading = false;
@@ -31,12 +40,25 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
   bool _isSearching = false;
 
   final List<int> _grades = [7, 8, 9, 10, 11];
-  final List<String> _letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
+  final List<String> _letters = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _messageController.dispose();
+    _tabController.dispose();
+    _titleRu.dispose();
+    _titleKk.dispose();
+    _titleEn.dispose();
+    _messageRu.dispose();
+    _messageKk.dispose();
+    _messageEn.dispose();
     _userSearchController.dispose();
     super.dispose();
   }
@@ -50,39 +72,13 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
     ];
   }
 
-  String _getTargetLabel(AppLocalizations l10n) {
-    switch (_targetType) {
-      case NotificationTarget.all:
-        return l10n.translate('target_all');
-      case NotificationTarget.grade:
-        return _targetGrade != null
-            ? '${l10n.translate('target_grade')} $_targetGrade'
-            : l10n.translate('target_grade');
-      case NotificationTarget.gradeClass:
-        return _targetGrade != null && _targetLetter != null
-            ? '${l10n.translate('target_class')} $_targetGrade$_targetLetter'
-            : l10n.translate('target_class');
-      case NotificationTarget.user:
-        return _targetUser != null
-            ? _targetUser!.fullName
-            : l10n.translate('target_user');
-    }
-  }
-
   Future<void> _searchUsers(String query) async {
     if (query.length < 2) {
-      setState(() {
-        _searchResults = [];
-      });
+      setState(() => _searchResults = []);
       return;
     }
-
-    setState(() {
-      _isSearching = true;
-    });
-
+    setState(() => _isSearching = true);
     final results = await _notificationService.searchUsersForTarget(query);
-
     setState(() {
       _searchResults = results;
       _isSearching = false;
@@ -92,40 +88,55 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
   Future<void> _createNotification() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Validate targeting
+    final l10n = AppLocalizations.of(context);
+
     if (_targetType == NotificationTarget.grade && _targetGrade == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).translate('select_grade'))),
+        SnackBar(content: Text(l10n.translate('select_grade'))),
       );
       return;
     }
-    if (_targetType == NotificationTarget.gradeClass && (_targetGrade == null || _targetLetter == null)) {
+    if (_targetType == NotificationTarget.gradeClass &&
+        (_targetGrade == null || _targetLetter == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).translate('select_class'))),
+        SnackBar(content: Text(l10n.translate('select_class'))),
       );
       return;
     }
     if (_targetType == NotificationTarget.user && _targetUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).translate('select_user'))),
+        SnackBar(content: Text(l10n.translate('select_user'))),
       );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      final notificationTypes = _getNotificationTypes(AppLocalizations.of(context));
+      final notificationTypes = _getNotificationTypes(l10n);
       final selectedTypeData = notificationTypes.firstWhere(
-        (type) => type['value'] == _selectedType,
+        (t) => t['value'] == _selectedType,
         orElse: () => notificationTypes[0],
       );
 
+      // Build translations map — only include non-empty entries
+      final titles = <String, String>{
+        'ru': _titleRu.text.trim(),
+        if (_titleKk.text.trim().isNotEmpty) 'kk': _titleKk.text.trim(),
+        if (_titleEn.text.trim().isNotEmpty) 'en': _titleEn.text.trim(),
+      };
+      final messages = <String, String>{
+        'ru': _messageRu.text.trim(),
+        if (_messageKk.text.trim().isNotEmpty) 'kk': _messageKk.text.trim(),
+        if (_messageEn.text.trim().isNotEmpty) 'en': _messageEn.text.trim(),
+      };
+
+      // Fallback title/message in Russian (legacy field)
       await _notificationService.createNotification(
-        title: _titleController.text.trim(),
-        message: _messageController.text.trim(),
+        title: _titleRu.text.trim(),
+        message: _messageRu.text.trim(),
+        titles: titles,
+        messages: messages,
         createdBy: widget.user.uid,
         createdByName: widget.user.fullName,
         type: _selectedType,
@@ -139,7 +150,7 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).translate('notification_created')),
+            content: Text(l10n.translate('notification_created')),
             backgroundColor: Colors.green,
           ),
         );
@@ -155,26 +166,17 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   IconData _getIconData(String iconName) {
     switch (iconName) {
-      case 'campaign':
-        return Icons.campaign;
-      case 'event':
-        return Icons.event;
-      case 'warning':
-        return Icons.warning;
-      case 'info':
-        return Icons.info;
-      default:
-        return Icons.notifications;
+      case 'campaign': return Icons.campaign;
+      case 'event':    return Icons.event;
+      case 'warning':  return Icons.warning;
+      case 'info':     return Icons.info;
+      default:         return Icons.notifications;
     }
   }
 
@@ -194,7 +196,7 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Notification type
+            // Notification type chips
             Text(
               l10n.translate('notification_type'),
               style: TextStyle(
@@ -226,11 +228,7 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
                   ),
                   selected: isSelected,
                   onSelected: (selected) {
-                    if (selected) {
-                      setState(() {
-                        _selectedType = type['value'];
-                      });
-                    }
+                    if (selected) setState(() => _selectedType = type['value']);
                   },
                 );
               }).toList(),
@@ -250,47 +248,45 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
             _buildTargetSelector(theme, l10n),
             const SizedBox(height: 24),
 
-            // Title
-            TextFormField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: l10n.translate('title'),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: theme.colorScheme.surfaceContainerHighest,
+            // Language tabs for title + message
+            Text(
+              '${l10n.translate('title')} / ${l10n.translate('message')}',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return l10n.translate('required_field');
-                }
-                return null;
-              },
-              maxLength: 100,
             ),
-            const SizedBox(height: 16),
-
-            // Message
-            TextFormField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                labelText: l10n.translate('message'),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: theme.colorScheme.surfaceContainerHighest,
-                alignLabelWithHint: true,
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return l10n.translate('required_field');
-                }
-                return null;
-              },
-              maxLines: 5,
-              maxLength: 500,
+              child: Column(
+                children: [
+                  TabBar(
+                    controller: _tabController,
+                    tabs: const [
+                      Tab(text: 'RU'),
+                      Tab(text: 'KK'),
+                      Tab(text: 'EN'),
+                    ],
+                    labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(
+                    height: 220,
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildLangFields(l10n, theme, _titleRu, _messageRu, required: true),
+                        _buildLangFields(l10n, theme, _titleKk, _messageKk),
+                        _buildLangFields(l10n, theme, _titleEn, _messageEn),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 24),
 
@@ -322,11 +318,64 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
     );
   }
 
+  Widget _buildLangFields(
+    AppLocalizations l10n,
+    ThemeData theme,
+    TextEditingController titleCtrl,
+    TextEditingController messageCtrl, {
+    bool required = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          TextFormField(
+            controller: titleCtrl,
+            decoration: InputDecoration(
+              labelText: l10n.translate('title'),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              filled: true,
+              fillColor: theme.colorScheme.surface,
+              isDense: true,
+            ),
+            validator: required
+                ? (v) => (v == null || v.trim().isEmpty)
+                    ? l10n.translate('required_field')
+                    : null
+                : null,
+            maxLength: 100,
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: TextFormField(
+              controller: messageCtrl,
+              decoration: InputDecoration(
+                labelText: l10n.translate('message'),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                filled: true,
+                fillColor: theme.colorScheme.surface,
+                alignLabelWithHint: true,
+                isDense: true,
+              ),
+              validator: required
+                  ? (v) => (v == null || v.trim().isEmpty)
+                      ? l10n.translate('required_field')
+                      : null
+                  : null,
+              maxLines: null,
+              expands: true,
+              maxLength: 500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTargetSelector(ThemeData theme, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Target type chips
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -334,60 +383,52 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
             ChoiceChip(
               label: Text(l10n.translate('target_all')),
               selected: _targetType == NotificationTarget.all,
-              onSelected: (selected) {
-                if (selected) {
-                  setState(() {
-                    _targetType = NotificationTarget.all;
-                    _targetGrade = null;
-                    _targetLetter = null;
-                    _targetUser = null;
-                  });
-                }
+              onSelected: (s) {
+                if (s) setState(() {
+                  _targetType = NotificationTarget.all;
+                  _targetGrade = null;
+                  _targetLetter = null;
+                  _targetUser = null;
+                });
               },
             ),
             ChoiceChip(
               label: Text(l10n.translate('target_grade')),
               selected: _targetType == NotificationTarget.grade,
-              onSelected: (selected) {
-                if (selected) {
-                  setState(() {
-                    _targetType = NotificationTarget.grade;
-                    _targetLetter = null;
-                    _targetUser = null;
-                  });
-                }
+              onSelected: (s) {
+                if (s) setState(() {
+                  _targetType = NotificationTarget.grade;
+                  _targetLetter = null;
+                  _targetUser = null;
+                });
               },
             ),
             ChoiceChip(
               label: Text(l10n.translate('target_class')),
               selected: _targetType == NotificationTarget.gradeClass,
-              onSelected: (selected) {
-                if (selected) {
-                  setState(() {
-                    _targetType = NotificationTarget.gradeClass;
-                    _targetUser = null;
-                  });
-                }
+              onSelected: (s) {
+                if (s) setState(() {
+                  _targetType = NotificationTarget.gradeClass;
+                  _targetUser = null;
+                });
               },
             ),
             ChoiceChip(
               label: Text(l10n.translate('target_user')),
               selected: _targetType == NotificationTarget.user,
-              onSelected: (selected) {
-                if (selected) {
-                  setState(() {
-                    _targetType = NotificationTarget.user;
-                    _targetGrade = null;
-                    _targetLetter = null;
-                  });
-                }
+              onSelected: (s) {
+                if (s) setState(() {
+                  _targetType = NotificationTarget.user;
+                  _targetGrade = null;
+                  _targetLetter = null;
+                });
               },
             ),
           ],
         ),
 
-        // Grade selector
-        if (_targetType == NotificationTarget.grade || _targetType == NotificationTarget.gradeClass) ...[
+        if (_targetType == NotificationTarget.grade ||
+            _targetType == NotificationTarget.gradeClass) ...[
           const SizedBox(height: 16),
           Row(
             children: [
@@ -396,23 +437,15 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
                   value: _targetGrade,
                   decoration: InputDecoration(
                     labelText: l10n.translate('grade'),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     filled: true,
                     fillColor: theme.colorScheme.surfaceContainerHighest,
                   ),
-                  items: _grades.map((grade) {
-                    return DropdownMenuItem(
-                      value: grade,
-                      child: Text('$grade ${l10n.translate('grade_suffix')}'),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _targetGrade = value;
-                    });
-                  },
+                  items: _grades.map((g) => DropdownMenuItem(
+                    value: g,
+                    child: Text('$g ${l10n.translate('grade_suffix')}'),
+                  )).toList(),
+                  onChanged: (v) => setState(() => _targetGrade = v),
                 ),
               ),
               if (_targetType == NotificationTarget.gradeClass) ...[
@@ -422,23 +455,14 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
                     value: _targetLetter,
                     decoration: InputDecoration(
                       labelText: l10n.translate('letter'),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       filled: true,
                       fillColor: theme.colorScheme.surfaceContainerHighest,
                     ),
-                    items: _letters.map((letter) {
-                      return DropdownMenuItem(
-                        value: letter,
-                        child: Text(letter),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _targetLetter = value;
-                      });
-                    },
+                    items: _letters.map((l) => DropdownMenuItem(
+                      value: l, child: Text(l),
+                    )).toList(),
+                    onChanged: (v) => setState(() => _targetLetter = v),
                   ),
                 ),
               ],
@@ -446,16 +470,13 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
           ),
         ],
 
-        // User search
         if (_targetType == NotificationTarget.user) ...[
           const SizedBox(height: 16),
           TextFormField(
             controller: _userSearchController,
             decoration: InputDecoration(
               labelText: l10n.translate('search_user'),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               filled: true,
               fillColor: theme.colorScheme.surfaceContainerHighest,
               prefixIcon: const Icon(Icons.search),
@@ -463,8 +484,7 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
                   ? const Padding(
                       padding: EdgeInsets.all(12),
                       child: SizedBox(
-                        width: 20,
-                        height: 20,
+                        width: 20, height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     )
@@ -476,19 +496,15 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
             const SizedBox(height: 8),
             Card(
               child: ListTile(
-                leading: CircleAvatar(
-                  child: Text(_targetUser!.fullName[0]),
-                ),
+                leading: CircleAvatar(child: Text(_targetUser!.fullName[0])),
                 title: Text(_targetUser!.fullName),
                 subtitle: Text(_targetUser!.formattedClass),
                 trailing: IconButton(
                   icon: const Icon(Icons.close),
-                  onPressed: () {
-                    setState(() {
-                      _targetUser = null;
-                      _userSearchController.clear();
-                    });
-                  },
+                  onPressed: () => setState(() {
+                    _targetUser = null;
+                    _userSearchController.clear();
+                  }),
                 ),
               ),
             ),
@@ -504,21 +520,17 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
               child: ListView.builder(
                 shrinkWrap: true,
                 itemCount: _searchResults.length,
-                itemBuilder: (context, index) {
-                  final user = _searchResults[index];
+                itemBuilder: (_, i) {
+                  final u = _searchResults[i];
                   return ListTile(
-                    leading: CircleAvatar(
-                      child: Text(user.fullName[0]),
-                    ),
-                    title: Text(user.fullName),
-                    subtitle: Text(user.formattedClass),
-                    onTap: () {
-                      setState(() {
-                        _targetUser = user;
-                        _searchResults = [];
-                        _userSearchController.text = user.fullName;
-                      });
-                    },
+                    leading: CircleAvatar(child: Text(u.fullName[0])),
+                    title: Text(u.fullName),
+                    subtitle: Text(u.formattedClass),
+                    onTap: () => setState(() {
+                      _targetUser = u;
+                      _searchResults = [];
+                      _userSearchController.text = u.fullName;
+                    }),
                   );
                 },
               ),

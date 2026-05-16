@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fizmat_app/models/user_model.dart';
+import 'package:flutter/foundation.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -48,8 +49,10 @@ class AuthService {
     } on AuthException {
       rethrow;
     } on FirebaseAuthException catch (e) {
+      debugPrint('FirebaseAuthException: code=${e.code} msg=${e.message}');
       throw AuthException(e.code);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('Auth unknown error: ${e.runtimeType}: $e\n$st');
       throw AuthException('unknown-error');
     }
   }

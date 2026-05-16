@@ -53,7 +53,7 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     // Icon rotation animation (subtle)
-    _iconRotationAnimation = Tween<double>(begin: -0.1, end: 0.0).animate(
+    _iconRotationAnimation = Tween<double>(begin: 0.0, end: 0.0).animate(
       CurvedAnimation(
         parent: _iconController,
         curve: Curves.easeOutBack,
@@ -162,28 +162,19 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Scaffold(
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: isDark
-                  ? [
-                      const Color(0xFF1a237e),
-                      const Color(0xFF0d47a1),
-                      const Color(0xFF01579b),
-                    ]
-                  : [
-                      const Color(0xFF1976d2),
-                      const Color(0xFF2196f3),
-                      const Color(0xFF64b5f6),
-                    ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF0F1D4E),
+                Color(0xFF1B2A6B),
+                Color(0xFF24357A),
+              ],
             ),
           ),
           child: SafeArea(
@@ -200,24 +191,23 @@ class _SplashScreenState extends State<SplashScreen>
                         child: Transform.rotate(
                           angle: _iconRotationAnimation.value,
                           child: Container(
-                            width: 140,
-                            height: 140,
+                            width: 160,
+                            height: 160,
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(32),
+                              shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.25),
-                                  blurRadius: 30,
-                                  offset: const Offset(0, 15),
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, 8),
                                 ),
                               ],
                             ),
-                            child: Center(
-                              child: Icon(
-                                Icons.school,
-                                size: 80,
-                                color: theme.colorScheme.primary,
+                            child: Transform.rotate(
+                              angle: -0.17,
+                              child: Image.asset(
+                                'assets/app_icon.png',
+                                fit: BoxFit.contain,
                               ),
                             ),
                           ),
@@ -236,32 +226,16 @@ class _SplashScreenState extends State<SplashScreen>
                         opacity: _textOpacityAnimation,
                         child: SlideTransition(
                           position: _textSlideAnimation,
-                          child: Column(
+                          child: const Column(
                             children: [
                               Text(
-                                'Fizmat App',
+                                'FizmatApp',
                                 style: TextStyle(
-                                  fontSize: 42,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.w700,
                                   color: Colors.white,
-                                  letterSpacing: 1.5,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black.withValues(alpha: 0.3),
-                                      offset: const Offset(0, 4),
-                                      blurRadius: 8,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Fizmat School App',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w400,
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  letterSpacing: 3,
+                                  letterSpacing: 0.5,
+                                  height: 1.1,
                                 ),
                               ),
                             ],

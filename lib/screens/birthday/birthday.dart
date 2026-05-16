@@ -59,8 +59,12 @@ class _FizBirthdayState extends State<FizBirthday> {
             // Decode Base64 -> UTF8
             final decodedName = utf8.decode(base64.decode(encodedName));
 
-            // Add +1 to class number (e.g., 10E -> 11E)
+            // Add +1 to class number (e.g., 10E -> 11E for current year)
             final updatedClass = _incrementClassName(className);
+
+            // Skip grade 12 — these are last year's 11th graders (graduated)
+            final gradeNum = int.tryParse(RegExp(r'(\d+)').firstMatch(updatedClass)?.group(1) ?? '');
+            if (gradeNum == 12) continue;
 
             birthdayList.add(BirthdayPerson(
               name: decodedName,
@@ -68,7 +72,7 @@ class _FizBirthdayState extends State<FizBirthday> {
               date: now,
             ));
           } catch (e) {
-            print('Error decoding name for line: $line - $e');
+            debugPrint('Error decoding name for line: $line - $e');
           }
         }
       }
@@ -197,12 +201,15 @@ class _FizBirthdayState extends State<FizBirthday> {
                                     size: 28,
                                   ),
                                   const SizedBox(width: 12),
-                                  Text(
-                                    l10n.translate('today_birthdays'),
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: theme.colorScheme.onSurface,
+                                  Expanded(
+                                    child: Text(
+                                      l10n.translate('today_birthdays'),
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],

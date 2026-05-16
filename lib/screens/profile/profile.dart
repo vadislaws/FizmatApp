@@ -1,6 +1,5 @@
 import 'package:fizmat_app/l10n/app_localizations.dart';
 import 'package:fizmat_app/providers/auth_provider.dart';
-import 'package:fizmat_app/services/kundelik_session_manager.dart';
 import 'package:fizmat_app/widgets/language_switcher.dart';
 import 'package:fizmat_app/widgets/theme_switcher.dart';
 import 'package:flutter/material.dart';
@@ -57,9 +56,6 @@ class FizProfile extends StatelessWidget {
               const SizedBox(height: 30),
               // Settings Section
               _buildSettingsSection(context, theme, l10n),
-              const SizedBox(height: 20),
-              // Kundelik Section
-              _buildKundelikSection(context, theme, l10n, user, authProvider),
               const SizedBox(height: 20),
               // Admin Panel Button (for admin roles)
               if (_hasAdminAccess(user.position))
@@ -291,17 +287,6 @@ class FizProfile extends StatelessWidget {
           ),
           _buildStatItem(
             theme,
-            l10n.gpa,
-            user.gpa != null ? user.gpa!.toStringAsFixed(2) : '--',
-            Icons.star,
-          ),
-          Container(
-            width: 1,
-            height: 40,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-          ),
-          _buildStatItem(
-            theme,
             l10n.friends,
             user.friendCount.toString(),
             Icons.people,
@@ -457,7 +442,7 @@ class FizProfile extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${user.friendCount} ${l10n.friends.toLowerCase()}',
+                    '${user.friendCount} ${_pluralizeFriends(user.friendCount, l10n)}',
                     style: TextStyle(
                       fontSize: 12,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -577,142 +562,6 @@ class FizProfile extends StatelessWidget {
     );
   }
 
-  Widget _buildKundelikSection(
-    BuildContext context,
-    ThemeData theme,
-    AppLocalizations l10n,
-    dynamic user,
-    AuthProvider authProvider,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                user.kundelikConnected ? Icons.check_circle : Icons.cloud_off,
-                color: user.kundelikConnected ? Colors.green : Colors.grey,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.kundelik,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      user.kundelikConnected
-                          ? l10n.kundelikConnected
-                          : l10n.kundelikNotConnected,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              TextButton(
-                onPressed: () async {
-                  if (user.kundelikConnected) {
-                    // Sync Kundelik data
-                    await _syncKundelik(context, authProvider);
-                  } else {
-                    // Connect to Kundelik
-                    await _connectToKundelik(context);
-                  }
-                },
-                child: Text(
-                  user.kundelikConnected
-                      ? l10n.syncKundelik
-                      : l10n.connectKundelik,
-                ),
-              ),
-            ],
-          ),
-          if (user.kundelikConnected) ...[
-            const SizedBox(height: 16),
-            Divider(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
-            const SizedBox(height: 16),
-            // GPA
-            if (user.gpa != null)
-              Row(
-                children: [
-                  Icon(
-                    Icons.star,
-                    color: Colors.amber,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '${l10n.gpa}: ${user.gpa.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                ],
-              ),
-            if (user.gpa != null) const SizedBox(height: 12),
-            // Birthday
-            if (user.birthday != null)
-              Row(
-                children: [
-                  Icon(
-                    Icons.cake,
-                    color: theme.colorScheme.primary,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '${l10n.birthday}: ${_formatDate(user.birthday)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                ],
-              ),
-            if (user.birthday != null) const SizedBox(height: 12),
-            // Last synced
-            if (user.lastKundelikSync != null)
-              Row(
-                children: [
-                  Icon(
-                    Icons.sync,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '${l10n.lastSynced}: ${_formatDateTime(user.lastKundelikSync)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-
   Widget _buildAdminPanelButton(
     BuildContext context,
     ThemeData theme,
@@ -809,116 +658,19 @@ class FizProfile extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
-  }
-
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day.toString().padLeft(2, '0')}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-  }
-
-  /// Connect to Kundelik
-  Future<void> _connectToKundelik(BuildContext context) async {
-    final result = await Navigator.pushNamed(context, '/kundelik-connect');
-
-    if (result == true && context.mounted) {
-      // Connection successful, data already synced in the screen
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).kundelikConnected),
-          backgroundColor: Colors.green,
-        ),
-      );
+  String _pluralizeFriends(int count, AppLocalizations l10n) {
+    final lang = l10n.locale.languageCode;
+    if (lang == 'ru') {
+      final mod10 = count % 10;
+      final mod100 = count % 100;
+      if (mod10 == 1 && mod100 != 11) return 'друг';
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'друга';
+      return 'друзей';
     }
+    if (lang == 'kk') return 'дос';
+    return count == 1 ? 'friend' : 'friends';
   }
 
-  /// Sync Kundelik data
-  Future<void> _syncKundelik(BuildContext context, AuthProvider authProvider) async {
-    final l10n = AppLocalizations.of(context);
-
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Center(
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                const SizedBox(height: 16),
-                Text(l10n.loading),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    try {
-      // Use KundelikSessionManager to sync data
-      final sessionManager = KundelikSessionManager.instance;
-      final data = await sessionManager.syncData();
-
-      if (data != null) {
-        // Extract GPA and birthday
-        final double? gpa = data['gpa']?.toDouble();
-        final DateTime? birthday = data['birthday'];
-
-        // Update auth provider with new data
-        await authProvider.updateKundelikData(
-          isConnected: true,
-          gpa: gpa,
-          birthday: birthday,
-          kundelikData: {
-            'userInfo': data['userInfo'],
-            'schoolInfo': data['schoolInfo'],
-            'marksCount': data['marksCount'],
-            'syncedAt': data['syncedAt'],
-          },
-        );
-
-        if (context.mounted) {
-          Navigator.pop(context); // Close loading dialog
-
-          // Show success message with GPA
-          String message = l10n.translate('sync_success') ?? '${l10n.syncKundelik} ${l10n.success.toLowerCase()}';
-          if (gpa != null && gpa > 0) {
-            message += ' | GPA: ${gpa.toStringAsFixed(2)}';
-          }
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        if (context.mounted) {
-          Navigator.pop(context); // Close loading dialog
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.translate('kundelik_sync_failed') ?? l10n.error),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${l10n.error}: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
 }
 
 class _EditProfileBottomSheet extends StatefulWidget {
@@ -1243,6 +995,8 @@ class _EditProfileBottomSheetState extends State<_EditProfileBottomSheet> {
   }
 
   Widget _buildClassDropdowns(ThemeData theme, AppLocalizations l10n) {
+    final isKundelikConnected = widget.user.kundelikConnected == true;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1261,80 +1015,117 @@ class _EditProfileBottomSheetState extends State<_EditProfileBottomSheet> {
           ],
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            // Grade Number Dropdown
-            Expanded(
-              flex: 2,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: theme.cardTheme.color,
-                  borderRadius: BorderRadius.circular(12),
+        if (isKundelikConnected) ...[
+          // Read-only display when Kundelik is connected
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: theme.cardTheme.color,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  _gradeNumber != null
+                      ? '$_gradeNumber${_gradeLetter ?? ''}'
+                      : l10n.graduated,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: theme.colorScheme.onSurface,
+                  ),
                 ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<int?>(
-                    value: _gradeNumber,
-                    hint: Text(l10n.gradeNumber),
-                    isExpanded: true,
-                    items: [
-                      DropdownMenuItem<int?>(
-                        value: null,
-                        child: Text(l10n.graduated),
+                const Spacer(),
+                Row(
+                  children: [
+                    Icon(Icons.lock, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Kundelik',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
-                      ..._grades.map((grade) {
-                        return DropdownMenuItem<int?>(
-                          value: grade,
-                          child: Text('$grade'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          Row(
+            children: [
+              // Grade Number Dropdown
+              Expanded(
+                flex: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: theme.cardTheme.color,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int?>(
+                      value: _gradeNumber,
+                      hint: Text(l10n.gradeNumber),
+                      isExpanded: true,
+                      items: [
+                        DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text(l10n.graduated),
+                        ),
+                        ..._grades.map((grade) {
+                          return DropdownMenuItem<int?>(
+                            value: grade,
+                            child: Text('$grade'),
+                          );
+                        }),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _gradeNumber = value;
+                          if (value == null) _gradeLetter = null;
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Letter Dropdown
+              Expanded(
+                flex: 1,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: theme.cardTheme.color,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String?>(
+                      value: _gradeLetter,
+                      hint: Text(l10n.letter),
+                      isExpanded: true,
+                      items: _letters.map((letter) {
+                        return DropdownMenuItem<String?>(
+                          value: letter,
+                          child: Text(letter),
                         );
-                      }),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _gradeNumber = value;
-                        if (value == null) {
-                          _gradeLetter = null;
-                        }
-                      });
-                    },
+                      }).toList(),
+                      onChanged: _gradeNumber == null
+                          ? null
+                          : (value) {
+                              setState(() {
+                                _gradeLetter = value;
+                              });
+                            },
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            // Letter Dropdown
-            Expanded(
-              flex: 1,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: theme.cardTheme.color,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String?>(
-                    value: _gradeLetter,
-                    hint: Text(l10n.letter),
-                    isExpanded: true,
-                    items: _letters.map((letter) {
-                      return DropdownMenuItem<String?>(
-                        value: letter,
-                        child: Text(letter),
-                      );
-                    }).toList(),
-                    onChanged: _gradeNumber == null
-                        ? null
-                        : (value) {
-                            setState(() {
-                              _gradeLetter = value;
-                            });
-                          },
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -1460,3 +1251,4 @@ class _EditProfileBottomSheetState extends State<_EditProfileBottomSheet> {
     }
   }
 }
+

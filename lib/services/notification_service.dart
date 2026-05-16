@@ -50,6 +50,8 @@ class NotificationService {
   Future<void> createNotification({
     required String title,
     required String message,
+    Map<String, String>? titles,
+    Map<String, String>? messages,
     required String createdBy,
     required String createdByName,
     String type = 'announcement',
@@ -66,6 +68,8 @@ class NotificationService {
     await _firestore.collection('notifications').add({
       'title': title,
       'message': message,
+      if (titles != null && titles.isNotEmpty) 'titles': titles,
+      if (messages != null && messages.isNotEmpty) 'messages': messages,
       'createdAt': now.toIso8601String(),
       'createdBy': createdBy,
       'createdByName': createdByName,
@@ -157,6 +161,8 @@ class NotificationService {
         final user = UserModel.fromMap(doc.data());
 
         if (user.birthday != null) {
+          // Skip grade 12 / graduated students
+          if (user.classGradeNumber == 12) continue;
           if (user.birthday!.month == now.month && user.birthday!.day == now.day) {
             debugPrint('Found birthday user: ${user.fullName} (${user.birthday})');
             birthdayUsers.add(user);
@@ -226,6 +232,16 @@ class NotificationService {
         await createNotification(
           title: title,
           message: message,
+          titles: {
+            'ru': 'День рождения!',
+            'kk': 'Туған күн!',
+            'en': 'Birthday!',
+          },
+          messages: {
+            'ru': 'Сегодня день рождения у ${user.fullName}! Поздравьте их!',
+            'kk': 'Бүгін ${user.fullName} туған күні! Оларды құттықтаңыз!',
+            'en': "Today is ${user.fullName}'s birthday! Wish them well!",
+          },
           createdBy: 'system',
           createdByName: 'System',
           type: 'birthday',

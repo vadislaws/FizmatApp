@@ -22,7 +22,7 @@ class _FizNavBarState extends State<FizNavBar> {
     final backgroundColor = isDark
         ? const Color(0xFF111C25)
         : theme.colorScheme.primary;
-    final appBarColor = theme.appBarTheme.backgroundColor!;
+    final appBarColor = theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface;
 
     return Scaffold(
       body: IndexedStack(
