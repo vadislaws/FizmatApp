@@ -1,5 +1,6 @@
 import 'package:fizmat_app/l10n/app_localizations.dart';
 import 'package:fizmat_app/providers/auth_provider.dart';
+import 'package:fizmat_app/services/kundelik_session_manager.dart';
 import 'package:fizmat_app/widgets/language_switcher.dart';
 import 'package:fizmat_app/widgets/theme_switcher.dart';
 import 'package:flutter/material.dart';
@@ -61,6 +62,9 @@ class FizProfile extends StatelessWidget {
               const SizedBox(height: 30),
               // Settings Section
               _buildSettingsSection(context, theme, l10n),
+              const SizedBox(height: 20),
+              // Kundelik Section
+              _buildKundelikSection(context, theme, l10n, user, authProvider),
               const SizedBox(height: 20),
               // Admin Panel Button (for admin roles)
               if (_hasAdminAccess(user.position))
@@ -436,6 +440,113 @@ class FizProfile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildKundelikSection(
+    BuildContext context,
+    ThemeData theme,
+    AppLocalizations l10n,
+    dynamic user,
+    AuthProvider authProvider,
+  ) {
+    final connected = user.kundelikConnected as bool;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                connected ? Icons.check_circle : Icons.cloud_off,
+                color: connected ? Colors.green : Colors.grey,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l10n.kundelik,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (connected) ...[
+            Text(
+              l10n.translate('kundelik_connected_label') != 'kundelik_connected_label'
+                  ? l10n.translate('kundelik_connected_label')
+                  : 'Аккаунт подключён — класс определяется автоматически',
+              style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () => _disconnectKundelik(context, authProvider),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              child: Text(l10n.translate('disconnect') != 'disconnect'
+                  ? l10n.translate('disconnect')
+                  : 'Отключить'),
+            ),
+          ] else ...[
+            ElevatedButton.icon(
+              onPressed: () => _connectToKundelik(context, authProvider),
+              icon: const Icon(Icons.link),
+              label: Text(l10n.connectKundelik),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _connectToKundelik(BuildContext context, AuthProvider authProvider) async {
+    final result = await Navigator.pushNamed(context, '/kundelik-connect');
+    if (result == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).kundelikConnected),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  Future<void> _disconnectKundelik(BuildContext context, AuthProvider authProvider) async {
+    final l10n = AppLocalizations.of(context);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.translate('kundelik_disconnect_confirm_title') != 'kundelik_disconnect_confirm_title'
+            ? l10n.translate('kundelik_disconnect_confirm_title')
+            : 'Отключить Кунделик?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.disconnect, style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !context.mounted) return;
+    await KundelikSessionManager.instance.disconnect();
+    await authProvider.updateKundelikData(isConnected: false);
   }
 
   Widget _buildSocialRow(ThemeData theme, IconData icon, String text, Color color) {
