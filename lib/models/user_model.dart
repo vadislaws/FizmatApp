@@ -17,11 +17,14 @@ class UserModel {
   final DateTime? lastKundelikSync;  // Last Kundelik sync time
   final int friendCount;  // Number of friends
   final Map<String, dynamic>? kundelikData;  // Additional Kundelik data
+  // Social links
+  final String? instagram;
+  final String? telegram;
   // Friends-only privacy settings
-  final bool showGpaToFriendsOnly;  // Show GPA to friends only
-  final bool showBioToFriendsOnly;  // Show bio to friends only
-  final bool showBirthdayToFriendsOnly;  // Show birthday to friends only
-  final bool showClassToFriendsOnly;  // Show class to friends only
+  final bool showGpaToFriendsOnly;
+  final bool showBioToFriendsOnly;
+  final bool showBirthdayToFriendsOnly;
+  final bool showClassToFriendsOnly;
 
   UserModel({
     required this.uid,
@@ -42,6 +45,8 @@ class UserModel {
     this.lastKundelikSync,
     this.friendCount = 0,
     this.kundelikData,
+    this.instagram,
+    this.telegram,
     this.showGpaToFriendsOnly = false,
     this.showBioToFriendsOnly = false,
     this.showBirthdayToFriendsOnly = false,
@@ -70,6 +75,8 @@ class UserModel {
       lastKundelikSync: map['lastKundelikSync'] != null ? DateTime.parse(map['lastKundelikSync']) : null,
       friendCount: map['friendCount'] ?? 0,
       kundelikData: map['kundelikData'],
+      instagram: map['instagram'],
+      telegram: map['telegram'],
       showGpaToFriendsOnly: map['showGpaToFriendsOnly'] ?? false,
       showBioToFriendsOnly: map['showBioToFriendsOnly'] ?? false,
       showBirthdayToFriendsOnly: map['showBirthdayToFriendsOnly'] ?? false,
@@ -97,6 +104,8 @@ class UserModel {
       'lastKundelikSync': lastKundelikSync?.toIso8601String(),
       'friendCount': friendCount,
       'kundelikData': kundelikData,
+      'instagram': instagram,
+      'telegram': telegram,
       'showGpaToFriendsOnly': showGpaToFriendsOnly,
       'showBioToFriendsOnly': showBioToFriendsOnly,
       'showBirthdayToFriendsOnly': showBirthdayToFriendsOnly,
@@ -123,6 +132,8 @@ class UserModel {
     DateTime? lastKundelikSync,
     int? friendCount,
     Map<String, dynamic>? kundelikData,
+    String? instagram,
+    String? telegram,
     bool? showGpaToFriendsOnly,
     bool? showBioToFriendsOnly,
     bool? showBirthdayToFriendsOnly,
@@ -147,6 +158,8 @@ class UserModel {
       lastKundelikSync: lastKundelikSync ?? this.lastKundelikSync,
       friendCount: friendCount ?? this.friendCount,
       kundelikData: kundelikData ?? this.kundelikData,
+      instagram: instagram ?? this.instagram,
+      telegram: telegram ?? this.telegram,
       showGpaToFriendsOnly: showGpaToFriendsOnly ?? this.showGpaToFriendsOnly,
       showBioToFriendsOnly: showBioToFriendsOnly ?? this.showBioToFriendsOnly,
       showBirthdayToFriendsOnly: showBirthdayToFriendsOnly ?? this.showBirthdayToFriendsOnly,

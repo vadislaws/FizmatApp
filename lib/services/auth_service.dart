@@ -357,23 +357,21 @@ class AuthService {
     String? classLetter,
     bool? isPrivate,
     String? avatarUrl,
+    String? instagram,
+    String? telegram,
   }) async {
     try {
       final Map<String, dynamic> updates = {};
 
       if (fullName != null) updates['fullName'] = fullName;
       if (username != null) {
-        // Validate username format
         if (!isUsernameValid(username)) {
           throw AuthException('username-invalid');
         }
-
-        // Check username availability
         final isAvailable = await isUsernameAvailable(username, uid);
         if (!isAvailable) {
           throw AuthException('username-taken');
         }
-
         updates['username'] = username.toLowerCase().trim();
       }
       if (bio != null) updates['bio'] = bio;
@@ -381,6 +379,8 @@ class AuthService {
       if (classLetter != null) updates['classLetter'] = classLetter;
       if (isPrivate != null) updates['isPrivate'] = isPrivate;
       if (avatarUrl != null) updates['avatarUrl'] = avatarUrl;
+      if (instagram != null) updates['instagram'] = instagram;
+      if (telegram != null) updates['telegram'] = telegram;
 
       // Update Firestore document
       await _firestore.collection('users').doc(uid).update(updates);

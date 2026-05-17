@@ -32,7 +32,10 @@ class FizProfile extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          padding: EdgeInsets.symmetric(
+            horizontal: MediaQuery.of(context).size.width > 600 ? 80 : 24,
+            vertical: 20,
+          ),
           child: Column(
             children: [
               const SizedBox(height: 20),
@@ -48,6 +51,8 @@ class FizProfile extends StatelessWidget {
               // Bio Section
               _buildBioCard(context, theme, l10n, user),
               const SizedBox(height: 20),
+              // Social Links
+              _buildSocialLinks(context, theme, user),
               // Friends Preview
               _buildFriendsPreview(context, theme, l10n, user),
               const SizedBox(height: 20),
@@ -404,6 +409,45 @@ class FizProfile extends StatelessWidget {
     );
   }
 
+  Widget _buildSocialLinks(BuildContext context, ThemeData theme, dynamic user) {
+    final instagram = user.instagram as String?;
+    final telegram = user.telegram as String?;
+    if ((instagram == null || instagram.isEmpty) && (telegram == null || telegram.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: theme.cardTheme.color,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (instagram != null && instagram.isNotEmpty)
+              _buildSocialRow(theme, Icons.camera_alt, '@$instagram', Colors.purple),
+            if (instagram != null && instagram.isNotEmpty && telegram != null && telegram.isNotEmpty)
+              const SizedBox(height: 12),
+            if (telegram != null && telegram.isNotEmpty)
+              _buildSocialRow(theme, Icons.send, '@$telegram', Colors.blue),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSocialRow(ThemeData theme, IconData icon, String text, Color color) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: 12),
+        Text(text, style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface)),
+      ],
+    );
+  }
+
   Widget _buildFriendsPreview(
     BuildContext context,
     ThemeData theme,
@@ -688,11 +732,13 @@ class _EditProfileBottomSheetState extends State<_EditProfileBottomSheet> {
   late TextEditingController _usernameController;
   late TextEditingController _nameController;
   late TextEditingController _bioController;
+  late TextEditingController _instagramController;
+  late TextEditingController _telegramController;
   int? _gradeNumber;
   String? _gradeLetter;
   bool _isPrivate = false;
   bool _isLoading = false;
-  String? _usernameError; // Track username availability error
+  String? _usernameError;
 
   final List<int> _grades = [7, 8, 9, 10, 11];
   final List<String> _letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
@@ -704,6 +750,8 @@ class _EditProfileBottomSheetState extends State<_EditProfileBottomSheet> {
         TextEditingController(text: widget.user.username ?? '');
     _nameController = TextEditingController(text: widget.user.fullName);
     _bioController = TextEditingController(text: widget.user.bio ?? '');
+    _instagramController = TextEditingController(text: widget.user.instagram ?? '');
+    _telegramController = TextEditingController(text: widget.user.telegram ?? '');
     _gradeNumber = widget.user.classGradeNumber;
     _gradeLetter = widget.user.classLetter;
     _isPrivate = widget.user.isPrivate;
@@ -723,6 +771,8 @@ class _EditProfileBottomSheetState extends State<_EditProfileBottomSheet> {
     _usernameController.dispose();
     _nameController.dispose();
     _bioController.dispose();
+    _instagramController.dispose();
+    _telegramController.dispose();
     super.dispose();
   }
 
@@ -804,6 +854,20 @@ class _EditProfileBottomSheetState extends State<_EditProfileBottomSheet> {
                       hint: l10n.enterBio,
                       icon: Icons.description,
                       maxLines: 3,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildTextField(
+                      controller: _instagramController,
+                      label: 'Instagram',
+                      hint: 'username',
+                      icon: Icons.camera_alt,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildTextField(
+                      controller: _telegramController,
+                      label: 'Telegram',
+                      hint: 'username',
+                      icon: Icons.send,
                     ),
                     const SizedBox(height: 20),
                     // Privacy Toggle
@@ -1226,6 +1290,12 @@ class _EditProfileBottomSheetState extends State<_EditProfileBottomSheet> {
           : null,
       classLetter: _gradeLetter != widget.user.classLetter ? _gradeLetter : null,
       isPrivate: _isPrivate != widget.user.isPrivate ? _isPrivate : null,
+      instagram: _instagramController.text.trim() != (widget.user.instagram ?? '')
+          ? _instagramController.text.trim()
+          : null,
+      telegram: _telegramController.text.trim() != (widget.user.telegram ?? '')
+          ? _telegramController.text.trim()
+          : null,
     );
 
     setState(() {

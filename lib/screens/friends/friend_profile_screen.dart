@@ -363,23 +363,6 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
       ));
     }
 
-    // Add GPA if allowed
-    if (showGpa) {
-      if (stats.isNotEmpty) {
-        stats.add(Container(
-          width: 1,
-          height: 40,
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-        ));
-      }
-      stats.add(_buildStatItem(
-        theme,
-        l10n.gpa,
-        user.gpa != null ? user.gpa!.toStringAsFixed(2) : '--',
-        Icons.star,
-      ));
-    }
-
     // Always add friends count
     if (stats.isNotEmpty) {
       stats.add(Container(

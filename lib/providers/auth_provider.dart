@@ -282,6 +282,8 @@ class AuthProvider with ChangeNotifier {
     String? classLetter,
     bool? isPrivate,
     String? avatarUrl,
+    String? instagram,
+    String? telegram,
   }) async {
     try {
       _setLoading(true);
@@ -304,6 +306,8 @@ class AuthProvider with ChangeNotifier {
         classLetter: classLetter,
         isPrivate: isPrivate,
         avatarUrl: avatarUrl,
+        instagram: instagram,
+        telegram: telegram,
       );
 
       _userModel = updatedUser;
