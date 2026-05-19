@@ -411,6 +411,8 @@ class AuthService {
     double? gpa,
     DateTime? birthday,
     Map<String, dynamic>? kundelikData,
+    int? classGradeNumber,
+    String? classLetter,
   }) async {
     try {
       final Map<String, dynamic> updates = {
@@ -421,6 +423,14 @@ class AuthService {
       if (gpa != null) updates['gpa'] = gpa;
       if (birthday != null) updates['birthday'] = birthday.toIso8601String();
       if (kundelikData != null) updates['kundelikData'] = kundelikData;
+      // When connecting, always write class fields to clear any stale data
+      if (isConnected) {
+        updates['classGradeNumber'] = classGradeNumber;
+        updates['classLetter'] = classLetter;
+      } else {
+        if (classGradeNumber != null) updates['classGradeNumber'] = classGradeNumber;
+        if (classLetter != null) updates['classLetter'] = classLetter;
+      }
 
       await _firestore.collection('users').doc(uid).update(updates);
     } on FirebaseException catch (e) {

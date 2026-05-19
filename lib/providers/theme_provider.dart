@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum AppThemeMode { light, dark, system }
@@ -39,21 +40,18 @@ class ThemeProvider with ChangeNotifier {
     await prefs.setString('theme_mode', mode.toString().split('.').last);
   }
 
-  // Разнообразная синяя цветовая схема
-  static const Color primaryBlue = Color(0xFF2196F3); // Material Blue
-  static const Color darkBlue = Color(0xFF1565C0); // Dark Blue
-  static const Color lightBlue = Color(0xFF42A5F5); // Light Blue
-  static const Color accentBlue = Color(0xFF448AFF); // Accent Blue
-  static const Color deepBlue = Color(0xFF0D47A1); // Deep Blue
-  static const Color skyBlue = Color(0xFF82B1FF); // Sky Blue
+  // Fizmat navy replaces all light blues
+  static const Color fizmatNavy   = Color(0xFF1B2A6B);
+  static const Color fizmatAccent = Color(0xFF3A5BD4); // slightly lighter navy-blue
 
   ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      colorScheme: ColorScheme.light(
-        primary: primaryBlue,
-        secondary: darkBlue,
+      textTheme: GoogleFonts.nunitoTextTheme(ThemeData.light().textTheme),
+      colorScheme: const ColorScheme.light(
+        primary: fizmatAccent,
+        secondary: fizmatNavy,
         surface: Colors.white,
         error: Colors.red,
         onPrimary: Colors.white,
@@ -86,13 +84,13 @@ class ThemeProvider with ChangeNotifier {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryBlue, width: 2),
+          borderSide: const BorderSide(color: fizmatAccent, width: 2),
         ),
-        prefixIconColor: primaryBlue,
+        prefixIconColor: fizmatAccent,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
+          backgroundColor: fizmatAccent,
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
@@ -108,15 +106,17 @@ class ThemeProvider with ChangeNotifier {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      colorScheme: ColorScheme.dark(
-        primary: lightBlue,
-        secondary: primaryBlue,
-        surface: const Color(0xFF2C2C2E),
+      textTheme: GoogleFonts.nunitoTextTheme(ThemeData.dark().textTheme),
+      colorScheme: const ColorScheme.dark(
+        primary: fizmatAccent,
+        secondary: fizmatNavy,
+        surface: Color(0xFF2C2C2E),
         error: Colors.redAccent,
-        onPrimary: Colors.black,
+        onPrimary: Colors.white,
         onSecondary: Colors.white,
         onSurface: Colors.white,
       ),
+      // Original dark grey background — only accent colours changed
       scaffoldBackgroundColor: const Color(0xFF1C1C1E),
       appBarTheme: const AppBarTheme(
         backgroundColor: Color(0xFF1C1C1E),
@@ -144,13 +144,13 @@ class ThemeProvider with ChangeNotifier {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: lightBlue, width: 2),
+          borderSide: const BorderSide(color: fizmatAccent, width: 2),
         ),
-        prefixIconColor: lightBlue,
+        prefixIconColor: fizmatAccent,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: lightBlue,
+          backgroundColor: fizmatAccent,
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
@@ -158,14 +158,6 @@ class ThemeProvider with ChangeNotifier {
           ),
           padding: const EdgeInsets.symmetric(vertical: 16),
         ),
-      ),
-      textTheme: const TextTheme(
-        bodyLarge: TextStyle(color: Colors.white),
-        bodyMedium: TextStyle(color: Colors.white),
-        bodySmall: TextStyle(color: Colors.white70),
-        titleLarge: TextStyle(color: Colors.white),
-        titleMedium: TextStyle(color: Colors.white),
-        titleSmall: TextStyle(color: Colors.white70),
       ),
     );
   }

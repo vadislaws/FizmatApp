@@ -14,11 +14,9 @@ class CreateNotificationScreen extends StatefulWidget {
       _CreateNotificationScreenState();
 }
 
-class _CreateNotificationScreenState extends State<CreateNotificationScreen>
-    with SingleTickerProviderStateMixin {
+class _CreateNotificationScreenState extends State<CreateNotificationScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Per-language title/message controllers (RU is required; KK and EN optional)
   final _titleRu = TextEditingController();
   final _titleKk = TextEditingController();
   final _titleEn = TextEditingController();
@@ -27,7 +25,6 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen>
   final _messageEn = TextEditingController();
   final _userSearchController = TextEditingController();
 
-  late final TabController _tabController;
   final NotificationService _notificationService = NotificationService();
 
   bool _isLoading = false;
@@ -45,14 +42,7 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen>
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
-
-  @override
   void dispose() {
-    _tabController.dispose();
     _titleRu.dispose();
     _titleKk.dispose();
     _titleEn.dispose();
@@ -248,46 +238,44 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen>
             _buildTargetSelector(theme, l10n),
             const SizedBox(height: 24),
 
-            // Language tabs for title + message
-            Text(
-              '${l10n.translate('title')} / ${l10n.translate('message')}',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            // Russian (required)
+            _buildSectionLabel(l10n.translate('title'), theme, required: true),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _titleRu,
+              decoration: InputDecoration(
+                hintText: 'Заголовок на русском',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: theme.colorScheme.surfaceContainerHighest,
+                isDense: true,
               ),
+              validator: (v) => (v == null || v.trim().isEmpty) ? l10n.translate('required_field') : null,
             ),
+            const SizedBox(height: 12),
+            _buildSectionLabel(l10n.translate('message'), theme, required: true),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: _messageRu,
+              decoration: InputDecoration(
+                hintText: 'Текст на русском',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: theme.colorScheme.surfaceContainerHighest,
+                alignLabelWithHint: true,
+              ),
+              minLines: 3,
+              maxLines: 6,
+              validator: (v) => (v == null || v.trim().isEmpty) ? l10n.translate('required_field') : null,
+            ),
+            const SizedBox(height: 20),
+
+            // Optional translations
+            _buildSectionLabel('Переводы (опционально)', theme),
             const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  TabBar(
-                    controller: _tabController,
-                    tabs: const [
-                      Tab(text: 'RU'),
-                      Tab(text: 'KK'),
-                      Tab(text: 'EN'),
-                    ],
-                    labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(
-                    height: 220,
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _buildLangFields(l10n, theme, _titleRu, _messageRu, required: true),
-                        _buildLangFields(l10n, theme, _titleKk, _messageKk),
-                        _buildLangFields(l10n, theme, _titleEn, _messageEn),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildOptionalLangBlock('KK', _titleKk, _messageKk, theme),
+            const SizedBox(height: 12),
+            _buildOptionalLangBlock('EN', _titleEn, _messageEn, theme),
             const SizedBox(height: 24),
 
             // Create button
@@ -318,54 +306,65 @@ class _CreateNotificationScreenState extends State<CreateNotificationScreen>
     );
   }
 
-  Widget _buildLangFields(
-    AppLocalizations l10n,
-    ThemeData theme,
+  Widget _buildSectionLabel(String text, ThemeData theme, {bool required = false}) {
+    return Row(
+      children: [
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+        if (required) ...[
+          const SizedBox(width: 4),
+          Text('*', style: TextStyle(color: theme.colorScheme.error, fontSize: 14)),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildOptionalLangBlock(
+    String lang,
     TextEditingController titleCtrl,
-    TextEditingController messageCtrl, {
-    bool required = false,
-  }) {
-    return Padding(
+    TextEditingController messageCtrl,
+    ThemeData theme,
+  ) {
+    return Container(
       padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(lang, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          const SizedBox(height: 8),
           TextFormField(
             controller: titleCtrl,
             decoration: InputDecoration(
-              labelText: l10n.translate('title'),
+              hintText: 'Заголовок',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               filled: true,
               fillColor: theme.colorScheme.surface,
               isDense: true,
             ),
-            validator: required
-                ? (v) => (v == null || v.trim().isEmpty)
-                    ? l10n.translate('required_field')
-                    : null
-                : null,
-            maxLength: 100,
           ),
           const SizedBox(height: 8),
-          Expanded(
-            child: TextFormField(
-              controller: messageCtrl,
-              decoration: InputDecoration(
-                labelText: l10n.translate('message'),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                filled: true,
-                fillColor: theme.colorScheme.surface,
-                alignLabelWithHint: true,
-                isDense: true,
-              ),
-              validator: required
-                  ? (v) => (v == null || v.trim().isEmpty)
-                      ? l10n.translate('required_field')
-                      : null
-                  : null,
-              maxLines: null,
-              expands: true,
-              maxLength: 500,
+          TextFormField(
+            controller: messageCtrl,
+            decoration: InputDecoration(
+              hintText: 'Текст',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              filled: true,
+              fillColor: theme.colorScheme.surface,
+              alignLabelWithHint: true,
+              isDense: true,
             ),
+            minLines: 2,
+            maxLines: 4,
           ),
         ],
       ),

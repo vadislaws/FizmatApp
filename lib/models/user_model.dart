@@ -169,7 +169,7 @@ class UserModel {
 
   // Helper to get formatted class (e.g., "9A" or "Graduated")
   String get formattedClass {
-    if (classGradeNumber == null) return 'Graduated';
+    if (classGradeNumber == null) return '-';
     if (classLetter == null) return classGradeNumber.toString();
     return '$classGradeNumber$classLetter';
   }

@@ -1,11 +1,9 @@
-import 'dart:convert';
-
 import 'package:fizmat_app/l10n/app_localizations.dart';
 import 'package:fizmat_app/providers/auth_provider.dart';
 import 'package:fizmat_app/providers/kundelik/kundelik_auth.dart';
+import 'package:fizmat_app/services/kundelik_session_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class KundelikConnectScreen extends StatefulWidget {
   const KundelikConnectScreen({super.key});
@@ -189,24 +187,26 @@ class _KundelikConnectScreenState extends State<KundelikConnectScreen> {
       // Sync full data including GPA
       final fullData = await kunAPI.syncFullData();
 
-      // Save token and credentials to local storage for persistent session
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('kundelik_access_token', accessToken);
-      await prefs.setString('kundelik_username', _usernameController.text.trim());
-      // Store encrypted credentials for auto-login (base64 encoded for basic obfuscation)
-      final encodedPassword = base64Encode(utf8.encode(_passwordController.text.trim()));
-      await prefs.setString('kundelik_credentials', encodedPassword);
-      await prefs.setBool('kundelik_connected', true);
+      // Save session via session manager (also sets the in-memory _kunAPI)
+      await KundelikSessionManager.instance.saveSession(
+        username: _usernameController.text.trim(),
+        password: _passwordController.text.trim(),
+        token: accessToken,
+      );
 
-      // Extract GPA and birthday
+      // Extract GPA, birthday and class info
       final double? gpa = fullData['gpa']?.toDouble();
       final DateTime? birthday = fullData['birthday'];
+      final int? classGradeNumber = fullData['classGradeNumber'] as int?;
+      final String? classLetter = fullData['classLetter'] as String?;
 
       // Update user profile with Kundelik data
       await authProvider.updateKundelikData(
         isConnected: true,
         gpa: gpa,
         birthday: birthday,
+        classGradeNumber: classGradeNumber,
+        classLetter: classLetter,
         kundelikData: {
           'userInfo': fullData['userInfo'],
           'schoolInfo': fullData['schoolInfo'],
@@ -241,14 +241,15 @@ class _KundelikConnectScreenState extends State<KundelikConnectScreen> {
         });
 
         String errorMessage;
-        if (e.message.contains('undergoing maintenance')) {
-          errorMessage = l10n.translate('kundelik_error_maintenance');
-        } else if (e.message.contains('authorizationFailed') ||
-                   e.message.toLowerCase().contains('invalid') ||
-                   e.message.toLowerCase().contains('incorrect')) {
+        final msg = e.message;
+        if (msg == 'authorizationFailed' || msg.contains('authorizationFailed')) {
           errorMessage = l10n.translate('kundelik_error_invalid_credentials');
+        } else if (msg.contains('maintenance') || msg.contains('HTML')) {
+          errorMessage = l10n.translate('kundelik_error_maintenance');
+        } else if (msg.contains('serverError:')) {
+          errorMessage = l10n.translate('kundelik_error_api');
         } else {
-          errorMessage = e.message;
+          errorMessage = l10n.translate('kundelik_error_unknown');
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -265,14 +266,14 @@ class _KundelikConnectScreenState extends State<KundelikConnectScreen> {
           _isLoading = false;
         });
 
-        String errorMessage = '${l10n.error}: ';
-        if (e.toString().contains('SocketException') ||
-            e.toString().contains('NetworkException')) {
-          errorMessage += l10n.translate('network_error') ?? 'Network error. Please check your internet connection.';
-        } else if (e.toString().contains('TimeoutException')) {
-          errorMessage += l10n.translate('timeout_error') ?? 'Connection timeout. Please try again.';
+        String errorMessage;
+        final s = e.toString();
+        if (s.contains('SocketException') || s.contains('NetworkException')) {
+          errorMessage = l10n.translate('kundelik_error_no_internet');
+        } else if (s.contains('TimeoutException')) {
+          errorMessage = l10n.translate('kundelik_error_maintenance');
         } else {
-          errorMessage += e.toString();
+          errorMessage = l10n.translate('kundelik_error_unknown');
         }
 
         ScaffoldMessenger.of(context).showSnackBar(

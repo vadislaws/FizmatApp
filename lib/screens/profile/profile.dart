@@ -2,6 +2,7 @@ import 'package:fizmat_app/l10n/app_localizations.dart';
 import 'package:fizmat_app/providers/auth_provider.dart';
 import 'package:fizmat_app/services/kundelik_session_manager.dart';
 import 'package:fizmat_app/widgets/language_switcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:fizmat_app/widgets/theme_switcher.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -62,9 +63,6 @@ class FizProfile extends StatelessWidget {
               const SizedBox(height: 30),
               // Settings Section
               _buildSettingsSection(context, theme, l10n),
-              const SizedBox(height: 20),
-              // Kundelik Section
-              _buildKundelikSection(context, theme, l10n, user, authProvider),
               const SizedBox(height: 20),
               // Admin Panel Button (for admin roles)
               if (_hasAdminAccess(user.position))
@@ -421,141 +419,55 @@ class FizProfile extends StatelessWidget {
     }
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: theme.cardTheme.color,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (instagram != null && instagram.isNotEmpty)
-              _buildSocialRow(theme, Icons.camera_alt, '@$instagram', Colors.purple),
-            if (instagram != null && instagram.isNotEmpty && telegram != null && telegram.isNotEmpty)
-              const SizedBox(height: 12),
-            if (telegram != null && telegram.isNotEmpty)
-              _buildSocialRow(theme, Icons.send, '@$telegram', Colors.blue),
-          ],
-        ),
-      ),
+      child: _buildSocialChips(theme, instagram, telegram),
     );
   }
 
-  Widget _buildKundelikSection(
-    BuildContext context,
-    ThemeData theme,
-    AppLocalizations l10n,
-    dynamic user,
-    AuthProvider authProvider,
-  ) {
-    final connected = user.kundelikConnected as bool;
+  Widget _buildSocialChips(ThemeData theme, String? instagram, String? telegram) {
+    const iconColor = Color(0xFF8E9BB5);
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        if (instagram != null && instagram.isNotEmpty)
+          _socialChip(
+            theme,
+            icon: FontAwesomeIcons.instagram,
+            label: '@$instagram',
+            iconColor: iconColor,
+          ),
+        if (telegram != null && telegram.isNotEmpty)
+          _socialChip(
+            theme,
+            icon: FontAwesomeIcons.telegram,
+            label: '@$telegram',
+            iconColor: iconColor,
+          ),
+      ],
+    );
+  }
+
+  Widget _socialChip(ThemeData theme, {required IconData icon, required String label, required Color iconColor}) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Icon(
-                connected ? Icons.check_circle : Icons.cloud_off,
-                color: connected ? Colors.green : Colors.grey,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  l10n.kundelik,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (connected) ...[
-            Text(
-              l10n.translate('kundelik_connected_label') != 'kundelik_connected_label'
-                  ? l10n.translate('kundelik_connected_label')
-                  : 'Аккаунт подключён — класс определяется автоматически',
-              style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+          FaIcon(icon, size: 15, color: iconColor),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
             ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: () => _disconnectKundelik(context, authProvider),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red,
-                side: const BorderSide(color: Colors.red),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-              ),
-              child: Text(l10n.translate('disconnect') != 'disconnect'
-                  ? l10n.translate('disconnect')
-                  : 'Отключить'),
-            ),
-          ] else ...[
-            ElevatedButton.icon(
-              onPressed: () => _connectToKundelik(context, authProvider),
-              icon: const Icon(Icons.link),
-              label: Text(l10n.connectKundelik),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Future<void> _connectToKundelik(BuildContext context, AuthProvider authProvider) async {
-    final result = await Navigator.pushNamed(context, '/kundelik-connect');
-    if (result == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).kundelikConnected),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
-  }
-
-  Future<void> _disconnectKundelik(BuildContext context, AuthProvider authProvider) async {
-    final l10n = AppLocalizations.of(context);
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.translate('kundelik_disconnect_confirm_title') != 'kundelik_disconnect_confirm_title'
-            ? l10n.translate('kundelik_disconnect_confirm_title')
-            : 'Отключить Кунделик?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.disconnect, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
-    );
-    if (confirm != true || !context.mounted) return;
-    await KundelikSessionManager.instance.disconnect();
-    await authProvider.updateKundelikData(isConnected: false);
-  }
-
-  Widget _buildSocialRow(ThemeData theme, IconData icon, String text, Color color) {
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(width: 12),
-        Text(text, style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface)),
-      ],
     );
   }
 
@@ -845,14 +757,9 @@ class _EditProfileBottomSheetState extends State<_EditProfileBottomSheet> {
   late TextEditingController _bioController;
   late TextEditingController _instagramController;
   late TextEditingController _telegramController;
-  int? _gradeNumber;
-  String? _gradeLetter;
   bool _isPrivate = false;
   bool _isLoading = false;
   String? _usernameError;
-
-  final List<int> _grades = [7, 8, 9, 10, 11];
-  final List<String> _letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
 
   @override
   void initState() {
@@ -863,8 +770,6 @@ class _EditProfileBottomSheetState extends State<_EditProfileBottomSheet> {
     _bioController = TextEditingController(text: widget.user.bio ?? '');
     _instagramController = TextEditingController(text: widget.user.instagram ?? '');
     _telegramController = TextEditingController(text: widget.user.telegram ?? '');
-    _gradeNumber = widget.user.classGradeNumber;
-    _gradeLetter = widget.user.classLetter;
     _isPrivate = widget.user.isPrivate;
 
     // Clear username error when user types
@@ -1170,139 +1075,118 @@ class _EditProfileBottomSheetState extends State<_EditProfileBottomSheet> {
   }
 
   Widget _buildClassDropdowns(ThemeData theme, AppLocalizations l10n) {
-    final isKundelikConnected = widget.user.kundelikConnected == true;
+    return _buildKundelikInline(theme, l10n);
+  }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.school, size: 18, color: theme.colorScheme.primary),
-            const SizedBox(width: 8),
-            Text(
-              l10n.changeClass,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (isKundelikConnected) ...[
-          // Read-only display when Kundelik is connected
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: theme.cardTheme.color,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Text(
-                  _gradeNumber != null
-                      ? '$_gradeNumber${_gradeLetter ?? ''}'
-                      : l10n.graduated,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const Spacer(),
-                Row(
-                  children: [
-                    Icon(Icons.lock, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Kundelik',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ] else ...[
+  Widget _buildKundelikInline(ThemeData theme, AppLocalizations l10n) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final connected = authProvider.userModel?.kundelikConnected == true;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           Row(
             children: [
-              // Grade Number Dropdown
-              Expanded(
-                flex: 2,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: theme.cardTheme.color,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<int?>(
-                      value: _gradeNumber,
-                      hint: Text(l10n.gradeNumber),
-                      isExpanded: true,
-                      items: [
-                        DropdownMenuItem<int?>(
-                          value: null,
-                          child: Text(l10n.graduated),
-                        ),
-                        ..._grades.map((grade) {
-                          return DropdownMenuItem<int?>(
-                            value: grade,
-                            child: Text('$grade'),
-                          );
-                        }),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _gradeNumber = value;
-                          if (value == null) _gradeLetter = null;
-                        });
-                      },
-                    ),
-                  ),
-                ),
+              Icon(
+                connected ? Icons.check_circle : Icons.cloud_off,
+                color: connected ? Colors.green : Colors.grey,
+                size: 20,
               ),
-              const SizedBox(width: 12),
-              // Letter Dropdown
-              Expanded(
-                flex: 1,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: theme.cardTheme.color,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String?>(
-                      value: _gradeLetter,
-                      hint: Text(l10n.letter),
-                      isExpanded: true,
-                      items: _letters.map((letter) {
-                        return DropdownMenuItem<String?>(
-                          value: letter,
-                          child: Text(letter),
-                        );
-                      }).toList(),
-                      onChanged: _gradeNumber == null
-                          ? null
-                          : (value) {
-                              setState(() {
-                                _gradeLetter = value;
-                              });
-                            },
-                    ),
-                  ),
+              const SizedBox(width: 8),
+              Text(
+                l10n.kundelik,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          if (connected) ...[
+            Text(
+              l10n.translate('kundelik_class_connected'),
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton(
+              onPressed: () => _disconnectKundelik(l10n),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              child: Text(l10n.translate('disconnect_kundelik')),
+            ),
+          ] else ...[
+            Text(
+              l10n.translate('kundelik_class_hint'),
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () => _connectKundelik(l10n),
+              icon: const Icon(Icons.link, size: 18),
+              label: Text(l10n.connectKundelik),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
+  }
+
+  Future<void> _connectKundelik(AppLocalizations l10n) async {
+    final result = await Navigator.pushNamed(context, '/kundelik-connect');
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.kundelikConnected),
+          backgroundColor: Colors.green,
+        ),
+      );
+      // AuthProvider notifies listeners automatically — no setState needed
+    }
+  }
+
+  Future<void> _disconnectKundelik(AppLocalizations l10n) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Отключить Кунделик?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.disconnect,
+                style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await KundelikSessionManager.instance.disconnect();
+    await authProvider.updateKundelikData(isConnected: false);
   }
 
   Widget _buildTextField({
@@ -1396,10 +1280,6 @@ class _EditProfileBottomSheetState extends State<_EditProfileBottomSheet> {
       bio: _bioController.text.trim() != widget.user.bio
           ? _bioController.text.trim()
           : null,
-      classGradeNumber: _gradeNumber != widget.user.classGradeNumber
-          ? _gradeNumber
-          : null,
-      classLetter: _gradeLetter != widget.user.classLetter ? _gradeLetter : null,
       isPrivate: _isPrivate != widget.user.isPrivate ? _isPrivate : null,
       instagram: _instagramController.text.trim() != (widget.user.instagram ?? '')
           ? _instagramController.text.trim()

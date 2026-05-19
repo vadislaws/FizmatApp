@@ -218,7 +218,7 @@ class _HeaderSection extends StatelessWidget {
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.blue,
+            color: Color(0xFF2244B8),
           ),
         ),
       ],
@@ -305,7 +305,7 @@ class _CodeDigitField extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.blue, width: 2),
+            borderSide: const BorderSide(color: Color(0xFF2244B8), width: 2),
           ),
         ),
         onChanged: onChanged,
@@ -332,7 +332,7 @@ class _VerifyButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: enabled ? onPressed : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue,
+          backgroundColor: const Color(0xFF2244B8),
           foregroundColor: Colors.white,
           disabledBackgroundColor: Colors.grey,
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -371,7 +371,7 @@ class _ResendCodeButton extends StatelessWidget {
       child: Text(
         l10n.resendCode,
         style: TextStyle(
-          color: canResend ? Colors.blue : Colors.grey,
+          color: canResend ? const Color(0xFF2244B8) : Colors.grey,
           fontSize: 16,
         ),
       ),

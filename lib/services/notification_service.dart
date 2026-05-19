@@ -134,15 +134,19 @@ class NotificationService {
   /// Search users for targeting
   Future<List<UserModel>> searchUsersForTarget(String query) async {
     if (query.isEmpty) return [];
-
-    final queryLower = query.toLowerCase();
-    final results = await _firestore.collection('users').get();
-
-    return results.docs
-        .map((doc) => UserModel.fromMap(doc.data()))
-        .where((user) => user.fullName.toLowerCase().contains(queryLower))
-        .take(10)
-        .toList();
+    try {
+      final queryLower = query.toLowerCase();
+      final results = await _firestore.collection('users').get();
+      return results.docs
+          .map((doc) => UserModel.fromMap(doc.data()))
+          .where((user) =>
+              user.fullName.toLowerCase().contains(queryLower) ||
+              (user.username?.toLowerCase().contains(queryLower) ?? false))
+          .take(10)
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   /// Get all users with birthday today

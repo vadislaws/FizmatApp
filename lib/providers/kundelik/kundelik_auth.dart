@@ -43,25 +43,27 @@ class KunBase {
         )
         .timeout(const Duration(seconds: 20));
 
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      throw KunError('authorizationFailed');
+    }
+
     if (response.statusCode != 200) {
       final body = response.body;
-      // Try to extract a meaningful error message
       try {
         final j = json.decode(body);
-        if (j is Map) {
-          final desc = j['description'] ?? j['message'] ?? j['error'];
-          if (desc != null) throw KunError(desc.toString());
+        if (j is Map && (j['type']?.toString() == 'authorizationFailed')) {
+          throw KunError('authorizationFailed');
         }
       } catch (e) {
         if (e is KunError) rethrow;
       }
-      throw KunError('Ошибка входа (${response.statusCode}). Проверь логин/пароль.');
+      throw KunError('serverError:${response.statusCode}');
     }
 
     final jsonResponse = json.decode(response.body);
 
     if (jsonResponse['type'] == 'authorizationFailed') {
-      throw KunError(jsonResponse['description']?.toString() ?? 'Неверный логин или пароль');
+      throw KunError('authorizationFailed');
     }
 
     final token = jsonResponse['accessToken'];
@@ -854,18 +856,145 @@ class KunAPI extends KunBase {
 
     final eduGroups = await getEduGroups(personId);
 
-    // Extract current class (highest classLevel group) from Kundelik
+    // Extract current class
     int? classGradeNumber;
     String? classLetter;
-    for (final g in eduGroups) {
-      final level = int.tryParse(g['classLevel']?.toString() ?? '');
-      if (level != null && (classGradeNumber == null || level > classGradeNumber)) {
-        classGradeNumber = level;
-        final name = (g['name'] ?? g['subjectName'] ?? '').toString();
-        final match = RegExp(r'\d+([A-Za-zА-Яа-яЁё])').firstMatch(name);
-        classLetter = match?.group(1)?.toUpperCase();
+
+    // Class letters in KZ/RU schools are uppercase Cyrillic А-Л (or Latin A-K)
+    // Extract grade level from a group map
+    // РФМШ Kundelik uses 'parallel' for the grade number
+    int? _groupLevel(Map g) {
+      final v = g['parallel'] ?? g['classLevel'] ?? g['level'] ?? g['class_level'];
+      return v is int ? v : int.tryParse(v?.toString() ?? '');
+    }
+
+    // Extract class letter from a group name — handles both Latin (E) and Cyrillic (Е)
+    // Name formats: "11-E", "11E", "11 Е", "11А"
+    String? _groupLetter(String name) {
+      final m = RegExp(r'\d+[\s\-_/]*([А-ЛA-K])', caseSensitive: false)
+          .firstMatch(name.trim());
+      return m?.group(1)?.toUpperCase();
+    }
+
+    // True if a group is a homeroom (not a subject group)
+    bool _isHomeroom(dynamic g) {
+      if (g['subjectId'] != null) return false;
+      if (g['subjectIds'] is List && (g['subjectIds'] as List).isNotEmpty) return false;
+      if (g['subject'] != null) return false;
+      return true;
+    }
+
+    List<dynamic> _asList(dynamic raw) {
+      if (raw is List) return raw;
+      if (raw is Map) {
+        for (final k in ['items', 'result', 'data', 'eduGroups']) {
+          if (raw[k] is List) return raw[k] as List<dynamic>;
+        }
+      }
+      return const [];
+    }
+
+    void _applyGroup(dynamic g) {
+      final lvl = _groupLevel(g as Map);
+      if (lvl == null || lvl < 1 || lvl > 11) return;
+      final letter = _groupLetter((g['name'] ?? '').toString());
+      if (letter == null) return;
+      classGradeNumber = lvl;
+      classLetter = letter;
+    }
+
+    final currentYear = DateTime.now().year;
+
+    bool _isCurrentYear(dynamic g) {
+      final sy = (g as Map)['studyyear'];
+      final syInt = sy is int ? sy : int.tryParse(sy?.toString() ?? '');
+      return syInt != null && (currentYear - syInt) <= 1;
+    }
+
+    bool _isActive(dynamic g) =>
+        (g['status'] ?? '').toString().toLowerCase() == 'active';
+
+    // Sort: Active status first, current studyyear first, then parallel descending
+    int _groupSort(dynamic a, dynamic b) {
+      final activeA = _isActive(a) ? 1 : 0;
+      final activeB = _isActive(b) ? 1 : 0;
+      if (activeB != activeA) return activeB.compareTo(activeA);
+      final curA = _isCurrentYear(a) ? 1 : 0;
+      final curB = _isCurrentYear(b) ? 1 : 0;
+      if (curB != curA) return curB.compareTo(curA);
+      return (_groupLevel(b as Map) ?? 0).compareTo(_groupLevel(a as Map) ?? 0);
+    }
+
+    // ── Step 1: context eduGroups — most reliable, already filtered to current school ─
+    try {
+      final ctx = await getContext();
+      final ctxGroups = ctx['eduGroups'];
+      if (ctxGroups is List && ctxGroups.isNotEmpty) {
+        final pool = List.from(ctxGroups)..sort(_groupSort);
+        for (final g in pool) {
+          if (!_isCurrentYear(g)) continue;
+          final lvl = _groupLevel(g as Map);
+          final letter = _groupLetter((g['name'] ?? '').toString());
+          if (lvl != null && lvl >= 1 && lvl <= 11 && letter != null) {
+            classGradeNumber = lvl;
+            classLetter = letter;
+            break;
+          }
+        }
+      }
+    } catch (_) {}
+
+    // ── Step 2: /edu-groups (current year) filtered by homeroom ──────────────
+    if (classLetter == null) {
+      try {
+        final raw = await getRaw('persons/$personId/edu-groups');
+        final groups = _asList(raw);
+        final homerooms = groups.where((g) => _isHomeroom(g) && _isCurrentYear(g)).toList()
+          ..sort(_groupSort);
+
+        for (final g in homerooms) {
+          final lvl = _groupLevel(g as Map);
+          if (lvl == null || lvl < 1 || lvl > 11) continue;
+          final letter = _groupLetter((g['name'] ?? '').toString());
+          if (letter != null) {
+            classGradeNumber = lvl;
+            classLetter = letter;
+            break;
+          }
+          classGradeNumber ??= lvl;
+        }
+      } catch (_) {}
+    }
+
+    // ── Step 3: historical groups (/all) — last resort ───────────────────────
+    if (classLetter == null && eduGroups.isNotEmpty) {
+      final homerooms = eduGroups.where(_isHomeroom).toList()
+        ..sort(_groupSort);
+
+      for (final g in homerooms) {
+        final lvl = _groupLevel(g as Map);
+        if (lvl == null || lvl < 1 || lvl > 11) continue;
+        final letter = _groupLetter((g['name'] ?? '').toString());
+        if (letter != null) {
+          classGradeNumber = lvl;
+          classLetter = letter;
+          break;
+        }
+      }
+
+      // Last resort: highest classLevel group that has a class letter in name
+      if (classLetter == null) {
+        final withLetter = eduGroups.where((g) {
+          final lvl = _groupLevel(g as Map);
+          return lvl != null && lvl >= 1 && lvl <= 11 &&
+              _groupLetter((g['name'] ?? '').toString()) != null;
+        }).toList()
+          ..sort((a, b) => (_groupLevel(b as Map) ?? 0)
+              .compareTo(_groupLevel(a as Map) ?? 0));
+        if (withLetter.isNotEmpty) _applyGroup(withLetter.first);
       }
     }
+
     result['classGradeNumber'] = classGradeNumber;
     result['classLetter'] = classLetter;
 

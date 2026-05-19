@@ -4,6 +4,7 @@ import 'package:fizmat_app/models/user_model.dart';
 import 'package:fizmat_app/providers/auth_provider.dart';
 import 'package:fizmat_app/services/friends_service.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
 class FriendProfileScreen extends StatefulWidget {
@@ -155,6 +156,11 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
               if (!isPrivate && canShowBio() && _user!.bio != null && _user!.bio!.isNotEmpty) ...[
                 _buildBioCard(context, theme, l10n, _user!),
                 const SizedBox(height: 20),
+              ],
+
+              // Social Links
+              if (!isPrivate) ...[
+                _buildSocialChips(theme, _user!),
               ],
 
               // Friends List
@@ -772,5 +778,51 @@ class _FriendProfileScreenState extends State<FriendProfileScreen> {
         .where('status', isEqualTo: 'pending')
         .get();
     return query.docs.isNotEmpty;
+  }
+
+  Widget _buildSocialChips(ThemeData theme, UserModel user) {
+    final instagram = user.instagram;
+    final telegram = user.telegram;
+    if ((instagram == null || instagram.isEmpty) && (telegram == null || telegram.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+    const iconColor = Color(0xFF8E9BB5);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          if (instagram != null && instagram.isNotEmpty)
+            _socialChip(theme, icon: FontAwesomeIcons.instagram, label: '@$instagram', iconColor: iconColor),
+          if (telegram != null && telegram.isNotEmpty)
+            _socialChip(theme, icon: FontAwesomeIcons.telegram, label: '@$telegram', iconColor: iconColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _socialChip(ThemeData theme, {required IconData icon, required String label, required Color iconColor}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FaIcon(icon, size: 15, color: iconColor),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

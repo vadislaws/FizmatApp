@@ -348,6 +348,8 @@ class AuthProvider with ChangeNotifier {
     double? gpa,
     DateTime? birthday,
     Map<String, dynamic>? kundelikData,
+    int? classGradeNumber,
+    String? classLetter,
   }) async {
     try {
       _setLoading(true);
@@ -366,6 +368,8 @@ class AuthProvider with ChangeNotifier {
         gpa: gpa,
         birthday: birthday,
         kundelikData: kundelikData,
+        classGradeNumber: classGradeNumber,
+        classLetter: classLetter,
       );
 
       // Reload user data

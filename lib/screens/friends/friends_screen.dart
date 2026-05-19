@@ -232,7 +232,7 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
                   // Recommendations section
-                  if (_showRecommendations && _recommendations.isNotEmpty) ...[
+                  if (_showRecommendations && (_isLoadingRecommendations || _recommendations.isNotEmpty)) ...[
                     _buildRecommendationsSection(context, theme, l10n, uid),
                     const SizedBox(height: 16),
                   ],
@@ -318,15 +318,6 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
   }
 
   Widget _buildRecommendationsSection(BuildContext context, ThemeData theme, AppLocalizations l10n, String uid) {
-    if (_isLoadingRecommendations) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -341,24 +332,69 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
                 color: theme.colorScheme.onSurface,
               ),
             ),
-            TextButton(
-              onPressed: _loadRecommendations,
-              child: Text(l10n.translate('refresh')),
-            ),
+            if (!_isLoadingRecommendations)
+              TextButton(
+                onPressed: _loadRecommendations,
+                child: Text(l10n.translate('refresh')),
+              ),
           ],
         ),
         const SizedBox(height: 8),
         SizedBox(
           height: 140,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: _recommendations.length,
-            itemBuilder: (context, index) {
-              return _buildRecommendationCard(context, theme, l10n, _recommendations[index], uid);
-            },
-          ),
+          child: _isLoadingRecommendations
+              ? ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: 4,
+                  itemBuilder: (_, __) => _buildSkeletonCard(theme),
+                )
+              : ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _recommendations.length,
+                  itemBuilder: (context, index) {
+                    return _buildRecommendationCard(context, theme, l10n, _recommendations[index], uid);
+                  },
+                ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSkeletonCard(ThemeData theme) {
+    return Container(
+      width: 110,
+      margin: const EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _shimmerBox(theme, 56, 56, shape: BoxShape.circle),
+          const SizedBox(height: 8),
+          _shimmerBox(theme, 12, 60),
+          const SizedBox(height: 4),
+          _shimmerBox(theme, 10, 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _shimmerBox(ThemeData theme, double height, double width, {BoxShape shape = BoxShape.rectangle}) {
+    return AnimatedOpacity(
+      opacity: 0.5,
+      duration: const Duration(milliseconds: 800),
+      child: Container(
+        height: height,
+        width: width,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          shape: shape,
+          borderRadius: shape == BoxShape.rectangle ? BorderRadius.circular(6) : null,
+        ),
+      ),
     );
   }
 

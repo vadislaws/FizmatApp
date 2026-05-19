@@ -3,7 +3,7 @@ import 'package:fizmat_app/l10n/app_localizations.dart';
 import 'package:fizmat_app/models/book.dart';
 import 'package:fizmat_app/services/book_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class FizBookOnline extends StatefulWidget {
   const FizBookOnline({super.key});
@@ -332,15 +332,32 @@ class BookViewerScreen extends StatefulWidget {
 }
 
 class _BookViewerScreenState extends State<BookViewerScreen> {
+  late final WebViewController _controller;
   double _progress = 0;
   bool _isLoading = true;
-  InAppWebViewController? _webViewController;
 
   @override
-  void dispose() {
-    _webViewController?.stopLoading();
-    _webViewController = null;
-    super.dispose();
+  void initState() {
+    super.initState();
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(NavigationDelegate(
+        onProgress: (p) {
+          if (mounted) {
+            setState(() {
+              _progress = p / 100.0;
+              if (p == 100) _isLoading = false;
+            });
+          }
+        },
+        onPageFinished: (_) {
+          if (mounted) setState(() => _isLoading = false);
+        },
+        onWebResourceError: (_) {
+          if (mounted) setState(() => _isLoading = false);
+        },
+      ))
+      ..loadRequest(Uri.parse(widget.book.pdfUrl));
   }
 
   @override
@@ -370,32 +387,7 @@ class _BookViewerScreenState extends State<BookViewerScreen> {
       ),
       body: Stack(
         children: [
-          InAppWebView(
-            initialUrlRequest: URLRequest(
-              url: WebUri(widget.book.pdfUrl),
-            ),
-            initialSettings: InAppWebViewSettings(
-              javaScriptEnabled: true,
-              mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
-              allowFileAccessFromFileURLs: true,
-              useHybridComposition: false,
-            ),
-            onWebViewCreated: (c) => _webViewController = c,
-            onProgressChanged: (controller, progress) {
-              if (mounted) {
-                setState(() {
-                  _progress = progress / 100.0;
-                  if (progress == 100) _isLoading = false;
-                });
-              }
-            },
-            onLoadStop: (controller, url) {
-              if (mounted) setState(() => _isLoading = false);
-            },
-            onReceivedError: (controller, request, error) {
-              if (mounted) setState(() => _isLoading = false);
-            },
-          ),
+          WebViewWidget(controller: _controller),
           if (_isLoading)
             Container(
               color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.85),
