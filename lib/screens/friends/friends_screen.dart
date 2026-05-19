@@ -360,43 +360,7 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildSkeletonCard(ThemeData theme) {
-    return Container(
-      width: 110,
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _shimmerBox(theme, 56, 56, shape: BoxShape.circle),
-          const SizedBox(height: 8),
-          _shimmerBox(theme, 12, 60),
-          const SizedBox(height: 4),
-          _shimmerBox(theme, 10, 40),
-        ],
-      ),
-    );
-  }
-
-  Widget _shimmerBox(ThemeData theme, double height, double width, {BoxShape shape = BoxShape.rectangle}) {
-    return AnimatedOpacity(
-      opacity: 0.5,
-      duration: const Duration(milliseconds: 800),
-      child: Container(
-        height: height,
-        width: width,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
-          shape: shape,
-          borderRadius: shape == BoxShape.rectangle ? BorderRadius.circular(6) : null,
-        ),
-      ),
-    );
-  }
+  Widget _buildSkeletonCard(ThemeData theme) => _RecommendationSkeleton(theme: theme);
 
   Widget _buildRecommendationCard(
     BuildContext context,
@@ -925,6 +889,89 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
                   },
                 ),
               ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RecommendationSkeleton extends StatefulWidget {
+  final ThemeData theme;
+  const _RecommendationSkeleton({required this.theme});
+
+  @override
+  State<_RecommendationSkeleton> createState() => _RecommendationSkeletonState();
+}
+
+class _RecommendationSkeletonState extends State<_RecommendationSkeleton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _opacity = Tween<double>(begin: 0.3, end: 0.7).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shimmer = widget.theme.colorScheme.onSurface;
+    return AnimatedBuilder(
+      animation: _opacity,
+      builder: (_, __) {
+        final color = shimmer.withValues(alpha: _opacity.value * 0.2);
+        return Container(
+          width: 110,
+          margin: const EdgeInsets.only(right: 12),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        height: 11,
+                        width: 60,
+                        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(6)),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        height: 10,
+                        width: 36,
+                        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(6)),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
